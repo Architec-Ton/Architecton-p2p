@@ -1,0 +1,15 @@
+const int BASECHAIN = 0;
+const error::wrong_workchain = 333;
+(int, int) parse_std_addr(slice s) asm "REWRITESTDADDR";
+
+
+const MY_WORKCHAIN = BASECHAIN;
+
+int is_same_workchain(slice addr) inline {
+    (int wc, _) = parse_std_addr(addr);
+    return wc == MY_WORKCHAIN;
+}
+
+() check_same_workchain(slice addr) impure inline {
+    throw_unless(error::wrong_workchain, is_same_workchain(addr));
+}
