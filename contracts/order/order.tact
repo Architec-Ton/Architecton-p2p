@@ -46,8 +46,8 @@ import "./jetton-utils.fc";
 message Request {
     jetton_sell_code: Cell;
     jetton_buy_code: Cell;
-    amount_sell: Int; // todo decimals
-    amount_buy: Int;
+    amount_sell: Int as coins;
+    amount_buy: Int as coins;
     jetton_sell_master: Address;
     jetton_buy_master: Address;
 }
@@ -93,13 +93,17 @@ const not_valid_wallet: Int = 74;
 
 contract Order with Deployable, Ownable {
     owner: Address;
+
     my_jetton_buy_wallet: Address;
     my_jetton_sell_wallet: Address;
-    request: Request;
+
+    amount_sell: Int;
+    amount_buy: Int;
+
     open: Bool;
     close: Bool;
 
-    init(owner: Address, request: Request) {
+    init(owner: Address, request: Request, time: Int) {
         let jetton_buy_owner_wallet: Address = calculateJettonWalletAddress(owner, request.jetton_buy_master, request.jetton_buy_code);
         let jetton_sell_owner_wallet: Address = calculateJettonWalletAddress(owner, request.jetton_sell_master, request.jetton_sell_code);
 
@@ -109,7 +113,10 @@ contract Order with Deployable, Ownable {
         self.owner = owner;
         self.my_jetton_buy_wallet = calculateJettonWalletAddress(myAddress(), request.jetton_buy_master, request.jetton_buy_code);
         self.my_jetton_sell_wallet = calculateJettonWalletAddress(myAddress(), request.jetton_sell_master, request.jetton_sell_code);
-        self.request = request;
+
+        self.amount_sell = request.amount_sell;
+        self.amount_buy = request.amount_buy;
+
         self.open = false;
         self.close = false;
     }
@@ -121,11 +128,11 @@ contract Order with Deployable, Ownable {
 
         if (ctx.sender == self.my_jetton_sell_wallet) {
             require(notify.sender == self.owner, "invalid sender");
-            require(notify.amount == self.request.amount_sell, "invalid jetton amount");
+            require(notify.amount == self.amount_sell, "invalid jetton amount");
             self.open = true;
         } else if (ctx.sender == self.my_jetton_buy_wallet) {
             require(self.open, "order not opened");
-            require(notify.amount == self.request.amount_buy, "invalid jetton amount");
+            require(notify.amount == self.amount_buy, "invalid jetton amount");
 
             let buyer: Address = notify.sender;
             //        let buyer_jetton_sell_wallet = calculateUserJettonWalletAddress(buyer, self.request.jetton_buy_master, self.request.jetton_buy_code);
@@ -138,7 +145,7 @@ contract Order with Deployable, Ownable {
                 mode: SendIgnoreErrors,
                 body: JettonTransfer {
                     query_id: 0,
-                    amount: self.request.amount_buy,
+                    amount: self.amount_buy,
                     destination: self.owner,
                     response_destination: self.owner,
                     custom_payload: null,
@@ -154,7 +161,7 @@ contract Order with Deployable, Ownable {
                 mode: SendIgnoreErrors,
                 body: JettonTransfer {
                     query_id: 0,
-                    amount: self.request.amount_sell,
+                    amount: self.amount_sell,
                     destination: buyer,
                     response_destination: buyer,
                     custom_payload: null,
@@ -168,6 +175,33 @@ contract Order with Deployable, Ownable {
         } else {
             throw(not_valid_wallet);
         }
+    }
+
+    receive("cancel") {
+        require(self.open && !self.close, "order already closed");
+
+        let ctx: Context = context();
+
+        require(ctx.sender == self.owner, "invalid sender");
+
+        send(SendParameters{
+            to: self.my_jetton_sell_wallet,
+            value: jetton_transfer_fee,
+            bounce: true,
+            mode: SendIgnoreErrors,
+            body: JettonTransfer {
+                query_id: 0,
+                amount: self.amount_buy,
+                destination: self.owner,
+                response_destination: self.owner,
+                custom_payload: null,
+                forward_payload: null,
+                forward_ton_amount: 0
+            }.toCell()
+        });
+
+        self.open = false;
+        self.close = true;
     }
 
     // todo: getters(what?), order cancellation, own calculate function, fees (maybe remValue to owner)
