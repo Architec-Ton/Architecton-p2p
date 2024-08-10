@@ -1,5 +1,4 @@
 import "@stdlib/deploy";
-import "@stdlib/ownable";
 
 import "./workchain.fc";
 import "./jetton-utils.fc";
@@ -10,21 +9,21 @@ import "./jetton-utils.fc";
 //native cellHash(c: Cell): Int;
 //
 //
-//inline fun pack_jetton_wallet_data(status: Int, balance: Int, owner_address: Slice, jetton_master_address: Slice): Cell {
+//inline fun pack_jetton_wallet_data(status: Int, balance: Int, seller_address: Slice, jetton_master_address: Slice): Cell {
 //    return beginCell()
 //    .storeUint(status, STATUS_SIZE)
 //    .storeCoins(balance)
-//    .storeSlice(owner_address)
+//    .storeSlice(seller_address)
 //    .storeSlice(jetton_master_address)
 //    .endCell();
 //}
 //
-//inline fun calculate_jetton_wallet_state_init(owner_address: Slice, jetton_master_address: Slice, jetton_wallet_code: Cell): Cell {
+//inline fun calculate_jetton_wallet_state_init(seller_address: Slice, jetton_master_address: Slice, jetton_wallet_code: Cell): Cell {
 //    return beginCell()
 //    .storeUint(0, 2)
 //    .storeRef(jetton_wallet_code)
 //    .storeRef(
-//    pack_jetton_wallet_data(0, 0, owner_address, jetton_master_address))
+//    pack_jetton_wallet_data(0, 0, seller_address, jetton_master_address))
 //    .storeUint(0, 1)
 //    .endCell();
 //}
@@ -39,8 +38,8 @@ import "./jetton-utils.fc";
 //    .beginParse();
 //}
 //
-//inline fun calculate_user_jetton_wallet_address(owner_address: Slice, jetton_master_address: Slice, jetton_wallet_code: Cell): Slice {
-//    return calculate_jetton_wallet_address(calculate_jetton_wallet_state_init(owner_address, jetton_master_address, jetton_wallet_code));
+//inline fun calculate_user_jetton_wallet_address(seller_address: Slice, jetton_master_address: Slice, jetton_wallet_code: Cell): Slice {
+//    return calculate_jetton_wallet_address(calculate_jetton_wallet_state_init(seller_address, jetton_master_address, jetton_wallet_code));
 //}
 
 message Request {
@@ -62,7 +61,7 @@ message(0x7362d09c) JettonTransferNotification {
 message(0x0f8a7ea5) JettonTransfer {
     query_id: Int as uint64;                // arbitrary request number
     amount: Int as coins;                   // amount of jettons to transfer
-    destination: Address;                   // address of the new owner of the jettons
+    destination: Address;                   // address of the new seller of the jettons
     response_destination: Address;          // address where to send a response with confirmation of a successful transfer and the rest of the incoming message Toncoins.
     custom_payload: Cell?;                  // optional custom payload
     forward_ton_amount: Int as coins;       // the amount of nanotons to be sent to the destination address.
@@ -70,29 +69,22 @@ message(0x0f8a7ea5) JettonTransfer {
 }
 
 @name(calculate_user_jetton_wallet_address)
-native calculateUserJettonWalletAddress(owner: Slice, jetton_master: Slice, jetton_wallet_code: Cell): Slice;
+native calculateUserJettonWalletAddress(seller: Slice, jetton_master: Slice, jetton_wallet_code: Cell): Slice;
 
-inline fun calculateJettonWalletAddress(owner: Address, jetton_master: Address, jetton_wallet_code: Cell): Address {
-    return calculateUserJettonWalletAddress(owner.asSlice(), jetton_master.asSlice(), jetton_wallet_code).loadAddress();
-}
-
-inline fun getJettonTransferBody(msg: JettonTransfer): Cell {
-    return beginCell()
-    .storeUint(260734629, 32)
-    .storeUint(msg.query_id, 64)
-    .storeCoins(msg.amount)
-    .storeAddress(msg.destination)
-    .storeAddress(msg.response_destination)
-    .storeCoins(msg.forward_ton_amount)
-    .storeUint(0, 1)
-    .endCell()
+inline fun calculateJettonWalletAddress(seller: Address, jetton_master: Address, jetton_wallet_code: Cell): Address {
+    return calculateUserJettonWalletAddress(seller.asSlice(), jetton_master.asSlice(), jetton_wallet_code).loadAddress();
 }
 
 const jetton_transfer_fee: Int = ton("0.07"); // ~ 0.4 TON, medium fee for any amount of Jetton is 0.037 TON - docs
-const not_valid_wallet: Int = 74;
+const invalid_address: Int = 136;
+const access_denided: Int = 132;
+const order_closed: Int = 133;
+const invalid_jetton_amount: Int = 39;
+const order_not_opened: Int = 40;
+const order_already_opened: Int = 41;
 
-contract Order with Deployable, Ownable {
-    owner: Address;
+contract Order with Deployable {
+    seller: Address;
 
     my_jetton_buy_wallet: Address;
     my_jetton_sell_wallet: Address;
@@ -103,14 +95,14 @@ contract Order with Deployable, Ownable {
     open: Bool;
     close: Bool;
 
-    init(owner: Address, request: Request, time: Int) {
-        let jetton_buy_owner_wallet: Address = calculateJettonWalletAddress(owner, request.jetton_buy_master, request.jetton_buy_code);
-        let jetton_sell_owner_wallet: Address = calculateJettonWalletAddress(owner, request.jetton_sell_master, request.jetton_sell_code);
+    init(seller: Address, request: Request, time: Int) {
+        let jetton_buy_seller_wallet: Address = calculateJettonWalletAddress(seller, request.jetton_buy_master, request.jetton_buy_code);
+        let jetton_sell_seller_wallet: Address = calculateJettonWalletAddress(seller, request.jetton_sell_master, request.jetton_sell_code);
 
-//        dump(jetton_sell_owner_wallet);
-//        dump(jetton_buy_owner_wallet);
+//        dump(jetton_sell_seller_wallet);
+//        dump(jetton_buy_seller_wallet);
 
-        self.owner = owner;
+        self.seller = seller;
         self.my_jetton_buy_wallet = calculateJettonWalletAddress(myAddress(), request.jetton_buy_master, request.jetton_buy_code);
         self.my_jetton_sell_wallet = calculateJettonWalletAddress(myAddress(), request.jetton_sell_master, request.jetton_sell_code);
 
@@ -122,21 +114,20 @@ contract Order with Deployable, Ownable {
     }
 
     receive(notify: JettonTransferNotification) {
-        require(!self.close, "order already closed");
+        nativeThrowUnless(order_closed, !self.close);
 
-        let ctx: Context = context();
+        let sender: Address = context().sender;
 
-        if (ctx.sender == self.my_jetton_sell_wallet) {
-            require(notify.sender == self.owner, "invalid sender");
-            require(notify.amount == self.amount_sell, "invalid jetton amount");
+        if (sender == self.my_jetton_sell_wallet) {
+            nativeThrowUnless(order_already_opened, self.open);
+            nativeThrowUnless(access_denided, notify.sender == self.seller);
+            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_sell);
             self.open = true;
-        } else if (ctx.sender == self.my_jetton_buy_wallet) {
-            require(self.open, "order not opened");
-            require(notify.amount == self.amount_buy, "invalid jetton amount");
+        } else if (sender == self.my_jetton_buy_wallet) {
+            nativeThrowUnless(order_not_opened, self.open);
+            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_buy);
 
             let buyer: Address = notify.sender;
-            //        let buyer_jetton_sell_wallet = calculateUserJettonWalletAddress(buyer, self.request.jetton_buy_master, self.request.jetton_buy_code);
-            //        let sellet_jetton_buy_wallet = calculateJettonWalletAddress(self.owner, self.request.jetton_sell_master, self.request.jetton_sell_code);
 
             send(SendParameters{
                 to: self.my_jetton_buy_wallet,
@@ -146,8 +137,8 @@ contract Order with Deployable, Ownable {
                 body: JettonTransfer {
                     query_id: 0,
                     amount: self.amount_buy,
-                    destination: self.owner,
-                    response_destination: self.owner,
+                    destination: self.seller,
+                    response_destination: self.seller,
                     custom_payload: null,
                     forward_payload: null,
                     forward_ton_amount: 0
@@ -165,24 +156,20 @@ contract Order with Deployable, Ownable {
                     destination: buyer,
                     response_destination: buyer,
                     custom_payload: null,
-                    forward_payload: emptySlice(),
+                    forward_payload: null,
                     forward_ton_amount: 0
                 }.toCell()
             });
 
-            self.open = false;
-            self.close = true;
+            self.open = false; self.close = true; // if no terminating, else send mode 128 + 32
         } else {
-            throw(not_valid_wallet);
+            throw(invalid_address);
         }
     }
 
     receive("cancel") {
-        require(self.open && !self.close, "order already closed");
-
-        let ctx: Context = context();
-
-        require(ctx.sender == self.owner, "invalid sender");
+        nativeThrowUnless(order_closed, self.open && !self.close);
+        nativeThrowUnless(access_denided, context().sender == self.seller);
 
         send(SendParameters{
             to: self.my_jetton_sell_wallet,
@@ -191,9 +178,9 @@ contract Order with Deployable, Ownable {
             mode: SendIgnoreErrors,
             body: JettonTransfer {
                 query_id: 0,
-                amount: self.amount_buy,
-                destination: self.owner,
-                response_destination: self.owner,
+                amount: self.amount_sell,
+                destination: self.seller,
+                response_destination: self.seller,
                 custom_payload: null,
                 forward_payload: null,
                 forward_ton_amount: 0
@@ -204,5 +191,5 @@ contract Order with Deployable, Ownable {
         self.close = true;
     }
 
-    // todo: getters(what?), order cancellation, own calculate function, fees (maybe remValue to owner)
+    // todo: getters(what?), own calculate function, fees (maybe remValue to seller)
 }

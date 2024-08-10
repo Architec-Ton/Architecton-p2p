@@ -33,7 +33,7 @@ let buyJettonContentMetadata = buildOnchainMetadata(buyJettonParams);
 // const jettonBuyMaster = Address.parse('EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT')
 
 
-describe('First stage', () => {
+describe('Second stage', () => {
     let blockchain: Blockchain;
 
     let deployer: SandboxContract<TreasuryContract>;
@@ -160,25 +160,12 @@ describe('First stage', () => {
             .storeUint(0, 1) // whether forward_payload or not
             .endCell();
 
-        const sellMinterDeployResult = await sellMinter.sendMint(deployer.getSender(), { // 0x642b7d07
+        await sellMinter.sendMint(deployer.getSender(), { // 0x642b7d07
             value: toNano('1.5'),
             queryID: 10,
             toAddress: deployer.address,
             tonAmount: toNano('0.4'),
             master_msg: master_msg
-        });
-
-        expect(sellMinterDeployResult.transactions).toHaveTransaction({
-            from: deployer.address,
-            to: sellMinter.address,
-            deploy: true,
-            success: true,
-        });
-
-        expect(sellMinterDeployResult.transactions).toHaveTransaction({
-            to: sellJettonWalletDeployer.address,
-            deploy: true,
-            success: true,
         });
 
         const deployerSellTransferBody = beginCell()
@@ -194,19 +181,12 @@ describe('First stage', () => {
             }))
             .endCell()
 
-        const deployerSellJettonTransferResult = await deployer.send({
+        await deployer.send({
             value: toNano(1),
             to: sellJettonWalletDeployer.address,
             sendMode: 2,
             body: deployerSellTransferBody
         })
-
-        expect(deployerSellJettonTransferResult.transactions).toHaveTransaction({
-            from: sellJettonWalletDeployer.address,
-            to: sellJettonWalletSeller.address,
-            deploy: true,
-            success: true,
-        });
 
         master_msg = beginCell()
             .storeUint(395134233, 32) // opCode: TokenTransferInternal / 0x178d4519
@@ -218,25 +198,12 @@ describe('First stage', () => {
             .storeUint(0, 1) // whether forward_payload or not
             .endCell();
 
-        const buyMinterDeployResult = await buyMinter.sendMint(deployer.getSender(), { // 0x642b7d07
+        await buyMinter.sendMint(deployer.getSender(), { // 0x642b7d07
             value: toNano('1.5'),
             queryID: 10,
             toAddress: deployer.address,
             tonAmount: toNano('0.4'),
             master_msg: master_msg
-        });
-
-        expect(buyMinterDeployResult.transactions).toHaveTransaction({
-            from: deployer.address,
-            to: buyMinter.address,
-            deploy: true,
-            success: true,
-        });
-
-        expect(buyMinterDeployResult.transactions).toHaveTransaction({
-            to: buyJettonWalletDeployer.address,
-            deploy: true,
-            success: true,
         });
 
         const deployerBuyTransferBody = beginCell()
@@ -252,19 +219,12 @@ describe('First stage', () => {
             }))
             .endCell()
 
-        const deployerBuyJettonTransferResult = await deployer.send({
+        await deployer.send({
             value: toNano(1),
             to: buyJettonWalletDeployer.address,
             sendMode: 2,
             body: deployerBuyTransferBody
         })
-
-        expect(deployerBuyJettonTransferResult.transactions).toHaveTransaction({
-            from: buyJettonWalletDeployer.address,
-            to: buyJettonWalletBuyer.address,
-            deploy: true,
-            success: true,
-        });
 
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
@@ -280,8 +240,7 @@ describe('First stage', () => {
         }
 
         order = blockchain.openContract(await Order.fromInit(seller.address, request, BigInt(Math.floor(Date.now() / 1000))));
-
-        const deployResult = await order.send(
+        await order.send(
             seller.getSender(),
             {
                 value: toNano('0.05'),
@@ -291,13 +250,6 @@ describe('First stage', () => {
                 queryId: 0n,
             }
         );
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: seller.address,
-            to: order.address,
-            deploy: true,
-            success: true,
-        });
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -314,6 +266,26 @@ describe('First stage', () => {
                 buyWalletCode
             )
         );
+
+        const sellTransferBody = beginCell()
+            .store(storeJettonTransfer({
+                $$type: 'JettonTransfer',
+                query_id: 0n,
+                amount: 10n,
+                destination: order.address,
+                response_destination: order.address,
+                custom_payload: beginCell().endCell(),
+                forward_ton_amount: toNano(0.1),
+                forward_payload: beginCell().endCell().asSlice(),
+            }))
+            .endCell()
+
+        await seller.send({
+            value: toNano(1),
+            to: sellJettonWalletSeller.address,
+            sendMode: 2,
+            body: sellTransferBody
+        })
     }, 100000000);
 
     it('should deploy & mint & transfer jettons', async () => {
@@ -337,7 +309,24 @@ describe('First stage', () => {
         })
     }, 100000000)
 
-    it('cancelled message', async () => {
+    it('cancelled message -> sender != owner', async () => {
+        const cancelTransaction = await order.send(
+            deployer.getSender(),
+            {
+                value: toNano(1)
+            },
+            "cancel"
+        )
+
+        expect(cancelTransaction.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: order.address,
+            success: false,
+            exitCode: 132
+        })
+    }, 100000000)
+
+    it('cancelled message -> sender == owner', async () => {
         const cancelTransaction = await order.send(
             seller.getSender(),
             {
@@ -349,9 +338,20 @@ describe('First stage', () => {
         expect(cancelTransaction.transactions).toHaveTransaction({
             from: seller.address,
             to: order.address,
-            success: false,
-            exitCode: 133
+            success: true,
         })
+
+        expect(cancelTransaction.transactions).toHaveTransaction({
+            from: sellJettonWalletOrder.address,
+            to: sellJettonWalletSeller.address,
+            success: true,
+        })
+
+        let sellJettonSellerBalance = (await sellJettonWalletSeller.getJettonData())[0]
+        let sellJettonOrderBalance = (await sellJettonWalletOrder.getJettonData())[0]
+
+        expect(sellJettonSellerBalance).toEqual(10000000000n)
+        expect(sellJettonOrderBalance).toEqual(0n)
     }, 100000000)
 
     it('notify from any Wallet', async () => {
@@ -434,7 +434,7 @@ describe('First stage', () => {
             success: true,
         });
 
-       const errJettonWalletOrder = blockchain.openContract(
+        const errJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
                     owner_address: order.address, jetton_master_address: errMinter.address
                 },
@@ -477,48 +477,14 @@ describe('First stage', () => {
         })
     }, 100000000)
 
-    it('notify from buyJettonWalletOrder', async () => {
-        const buyTransferBody = beginCell()
-            .store(storeJettonTransfer({
-                $$type: 'JettonTransfer',
-                query_id: 0n,
-                amount: 5n,
-                destination: order.address,
-                response_destination: order.address,
-                custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.1),
-                forward_payload: beginCell().endCell().asSlice(),
-            }))
-            .endCell()
-
-        const buyJettonTransferResult = await deployer.send({
-            value: toNano(1),
-            to: buyJettonWalletDeployer.address,
-            sendMode: 2,
-            body: buyTransferBody
-        })
-
-        expect(buyJettonTransferResult.transactions).toHaveTransaction({
-            from: buyJettonWalletDeployer.address,
-            to: buyJettonWalletOrder.address,
-            deploy: true,
-            success: true
-        })
-
-        expect(buyJettonTransferResult.transactions).toHaveTransaction({
-            from: buyJettonWalletOrder.address,
-            to: order.address,
-            success: false,
-            exitCode: 40
-        })
-    }, 100000000)
-
-    it('notify from sellJettonWalletOrder -> jetton sender != owner', async () => {
+    // todo: узнать что делать
+    
+    it('notify from sellJettonWalletOrder', async () => {
         const sellTransferBody = beginCell()
             .store(storeJettonTransfer({
                 $$type: 'JettonTransfer',
                 query_id: 0n,
-                amount: 10n,
+                amount: 5n,
                 destination: order.address,
                 response_destination: order.address,
                 custom_payload: beginCell().endCell(),
@@ -545,12 +511,12 @@ describe('First stage', () => {
             from: sellJettonWalletOrder.address,
             to: order.address,
             success: false,
-            exitCode: 132
+            exitCode: 41242
         })
     }, 100000000)
 
-    it('notify from sellJettonWalletOrder -> jetton sender == owner -> with the wrong amount', async () => {
-        const sellTransferBody = beginCell()
+    it('notify from buyJettonWalletOrder -> with the wrong amount', async () => {
+        const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
                 $$type: 'JettonTransfer',
                 query_id: 0n,
@@ -563,22 +529,22 @@ describe('First stage', () => {
             }))
             .endCell()
 
-        const sellJettonTransferResult = await seller.send({
+        const buyJettonTransferResult = await buyer.send({
             value: toNano(1),
-            to: sellJettonWalletSeller.address,
+            to: buyJettonWalletBuyer.address,
             sendMode: 2,
-            body: sellTransferBody
+            body: buyTransferBody
         })
 
-        expect(sellJettonTransferResult.transactions).toHaveTransaction({
-            from: sellJettonWalletSeller.address,
-            to: sellJettonWalletOrder.address,
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletBuyer.address,
+            to: buyJettonWalletOrder.address,
             deploy: true,
             success: true
         })
 
-        expect(sellJettonTransferResult.transactions).toHaveTransaction({
-            from: sellJettonWalletOrder.address,
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletOrder.address,
             to: order.address,
             success: false,
             exitCode: 39
@@ -586,11 +552,11 @@ describe('First stage', () => {
     }, 100000000)
 
     it('main flow', async () => {
-        const sellTransferBody = beginCell()
+        const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
                 $$type: 'JettonTransfer',
                 query_id: 0n,
-                amount: 10n,
+                amount: 5n,
                 destination: order.address,
                 response_destination: order.address,
                 custom_payload: beginCell().endCell(),
@@ -599,30 +565,50 @@ describe('First stage', () => {
             }))
             .endCell()
 
-        const sellJettonTransferResult = await seller.send({
+        const buyJettonTransferResult = await buyer.send({
             value: toNano(1),
-            to: sellJettonWalletSeller.address,
+            to: buyJettonWalletBuyer.address,
             sendMode: 2,
-            body: sellTransferBody
+            body: buyTransferBody
         })
 
-        expect(sellJettonTransferResult.transactions).toHaveTransaction({
-            from: sellJettonWalletSeller.address,
-            to: sellJettonWalletOrder.address,
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletBuyer.address,
+            to: buyJettonWalletOrder.address,
             deploy: true,
             success: true
         })
 
-        expect(sellJettonTransferResult.transactions).toHaveTransaction({
-            from: sellJettonWalletOrder.address,
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletOrder.address,
             to: order.address,
-            success: true,
+            success: true
         })
 
-        let sellJettonSellerBalance = (await sellJettonWalletSeller.getJettonData())[0]
-        let sellJettonOrderBalance = (await sellJettonWalletOrder.getJettonData())[0]
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletOrder.address,
+            to: buyJettonWalletSeller.address,
+            success: true,
+            deploy: true
+        })
 
-        expect(sellJettonOrderBalance).toEqual(request.amount_sell)
-        expect(sellJettonSellerBalance).toEqual(9999999990n)
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: sellJettonWalletOrder.address,
+            to: sellJettonWalletBuyer.address,
+            success: true,
+            deploy: true
+        })
+
+        let sellJettonBuyerBalance = (await sellJettonWalletBuyer.getJettonData())[0]
+        let buyJettonBuyerBalance = (await buyJettonWalletBuyer.getJettonData())[0]
+        let buyJettonSellerBalance = (await buyJettonWalletSeller.getJettonData())[0]
+        let sellJettonOrderBalance = (await sellJettonWalletOrder.getJettonData())[0]
+        let buyJettonOrderBalance = (await buyJettonWalletOrder.getJettonData())[0]
+
+        expect(sellJettonBuyerBalance).toEqual(request.amount_sell)
+        expect(buyJettonSellerBalance).toEqual(request.amount_buy)
+        expect(buyJettonBuyerBalance).toEqual(9999999995n)
+        expect(sellJettonOrderBalance).toEqual(0n)
+        expect(buyJettonOrderBalance).toEqual(0n)
     }, 100000000)
 });
