@@ -95,6 +95,10 @@ contract Order with Deployable {
     open: Bool;
     close: Bool;
 
+    get fun calculateJettonWalletAddress(seller: Address, jetton_master: Address, jetton_wallet_code: Cell): Address {
+        return calculateJettonWalletAddress(seller, jetton_master, jetton_wallet_code);
+    }
+
     init(seller: Address, request: Request, time: Int) {
         let jetton_buy_seller_wallet: Address = calculateJettonWalletAddress(seller, request.jetton_buy_master, request.jetton_buy_code);
         let jetton_sell_seller_wallet: Address = calculateJettonWalletAddress(seller, request.jetton_sell_master, request.jetton_sell_code);
@@ -119,7 +123,7 @@ contract Order with Deployable {
         let sender: Address = context().sender;
 
         if (sender == self.my_jetton_sell_wallet) {
-            nativeThrowUnless(order_already_opened, self.open);
+            nativeThrowUnless(order_already_opened, !self.open);
             nativeThrowUnless(access_denided, notify.sender == self.seller);
             nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_sell);
             self.open = true;
