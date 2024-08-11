@@ -598,13 +598,13 @@ describe('First stage', () => {
                 destination: order.address,
                 response_destination: order.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.1),
+                forward_ton_amount: toNano(0.01),
                 forward_payload: beginCell().endCell().asSlice(),
             }))
             .endCell()
 
         const sellJettonTransferResult = await seller.send({
-            value: toNano(1),
+            value: toNano(0.1),
             to: sellJettonWalletSeller.address,
             sendMode: 2,
             body: sellTransferBody
@@ -622,6 +622,8 @@ describe('First stage', () => {
             to: order.address,
             success: true,
         })
+
+        printTransactionFees(sellJettonTransferResult.transactions)
 
         let sellJettonSellerBalance = (await sellJettonWalletSeller.getJettonData())[0]
         let sellJettonOrderBalance = (await sellJettonWalletOrder.getJettonData())[0]
@@ -856,7 +858,7 @@ describe('Second stage', () => {
 
         const deployResult = await seller.send(
             {
-                value: toNano(0.02),
+                value: toNano(0.015),
                 to: order.address,
                 sendMode: 2,
                 bounce: false,
@@ -887,17 +889,20 @@ describe('Second stage', () => {
                 destination: order.address,
                 response_destination: order.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.1),
+                forward_ton_amount: toNano(0.014332),
                 forward_payload: beginCell().endCell().asSlice(),
             }))
             .endCell()
 
-        await seller.send({
-            value: toNano(1),
+        const sellJettonTransferResult = await seller.send({
+            value: toNano(0.031956),
             to: sellJettonWalletSeller.address,
             sendMode: 2,
             body: sellTransferBody
         })
+
+        printTransactionFees(sellJettonTransferResult.transactions)
+
     }, 100000000);
 
     it('should deploy & mint & transfer jettons', async () => {
@@ -1171,17 +1176,20 @@ describe('Second stage', () => {
                 destination: order.address,
                 response_destination: order.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.1),
+                forward_ton_amount: toNano(0.030113),
                 forward_payload: beginCell().endCell().asSlice(),
             }))
             .endCell()
 
         const buyJettonTransferResult = await buyer.send({
-            value: toNano(1),
+            value: toNano(0.0472),
             to: buyJettonWalletBuyer.address,
             sendMode: 2,
             body: buyTransferBody
         })
+
+        printTransactionFees(buyJettonTransferResult.transactions)
+
 
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletBuyer.address,

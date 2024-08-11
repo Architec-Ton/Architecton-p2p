@@ -1,5 +1,3 @@
-import "@stdlib/deploy";
-
 message Request {
     my_jetton_sell_wallet: Address;
     my_jetton_buy_wallet: Address;
@@ -24,7 +22,7 @@ message(0x0f8a7ea5) JettonTransfer {
     forward_payload: Slice?;    // optional custom data that should be sent to the destination address.
 }
 
-const jetton_transfer_fee: Int = ton("0.07"); // ~ 0.4 TON, medium fee for any amount of Jetton is 0.037 TON - docs
+const jetton_transfer_fee: Int = ton("0.018586"); // ~ 0.04 TON, medium fee for any amount of Jetton is 0.037 TON - docs
 const invalid_address: Int = 136;
 const access_denided: Int = 132;
 const order_closed: Int = 133;
