@@ -1,8 +1,19 @@
 message Request {
     my_jetton_sell_wallet: Address;
     my_jetton_buy_wallet: Address;
+    jetton_sell_master: Address;
+    jetton_buy_master: Address;
     amount_sell: Int as coins;
     amount_buy: Int as coins;
+
+    timeout: Int;
+}
+
+struct State {
+    seller: Address;
+    request: Request;
+    open: Bool;
+    close: Bool;
 }
 
 message(0x7362d09c) JettonTransferNotification {
@@ -29,37 +40,54 @@ const order_closed: Int = 133;
 const invalid_jetton_amount: Int = 39;
 const order_not_opened: Int = 40;
 const order_already_opened: Int = 41;
+const invalid_timeout: Int = 42;
 
 contract Order {
     seller: Address;
 
     my_jetton_buy_wallet: Address = newAddress(0,0);
     my_jetton_sell_wallet: Address = newAddress(0,0);
+    jetton_sell_master: Address = newAddress(0,0);
+    jetton_buy_master: Address = newAddress(0,0);
 
     amount_sell: Int = 0;
     amount_buy: Int = 0;
+
+    timeout: Int = 0;
 
     open: Bool = false;
     close: Bool = false;
 
     init(seller: Address, time: Int) {
-//        let jetton_buy_seller_wallet: Address = calculateJettonWalletAddress(seller, request.jetton_buy_master, request.jetton_buy_code);
-//        let jetton_sell_seller_wallet: Address = calculateJettonWalletAddress(seller, request.jetton_sell_master, request.jetton_sell_code);
-
-//        dump(jetton_sell_seller_wallet);
-//        dump(jetton_buy_seller_wallet);
-
         self.seller = seller;
     }
 
     receive(request: Request) {
         nativeThrowUnless(order_already_opened, !self.close && !self.open);
 
-        self.my_jetton_buy_wallet = request.my_jetton_buy_wallet;
         self.my_jetton_sell_wallet = request.my_jetton_sell_wallet;
+        self.my_jetton_buy_wallet = request.my_jetton_buy_wallet;
+
+        self.jetton_sell_master = request.jetton_sell_master;
+        self.jetton_buy_master = request.jetton_buy_master;
 
         self.amount_sell = request.amount_sell;
         self.amount_buy = request.amount_buy;
+
+        self.timeout = request.timeout;
+    }
+
+    fun withdraw() {
+        self.open = false;
+        self.close = true;
+
+        send(SendParameters{
+            to: self.seller,
+            value: 0,
+            bounce: false,
+            mode: SendRemainingBalance + SendDestroyIfZero,
+            body: null,
+        });
     }
 
     receive(notify: JettonTransferNotification) {
@@ -74,6 +102,7 @@ contract Order {
             self.open = true;
         } else if (sender == self.my_jetton_buy_wallet) {
             nativeThrowUnless(order_not_opened, self.open);
+            nativeThrowUnless(invalid_timeout, self.timeout > now());
             nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_buy);
 
             let buyer: Address = notify.sender;
@@ -110,7 +139,7 @@ contract Order {
                 }.toCell()
             });
 
-            self.open = false; self.close = true; // if no terminating, else send mode 128 + 32
+            self.withdraw()
         } else {
             throw(invalid_address);
         }
@@ -136,9 +165,24 @@ contract Order {
             }.toCell()
         });
 
-        self.open = false;
-        self.close = true;
+        self.withdraw()
     }
 
-    // todo: getters(what?), own calculate function, fees (maybe remValue to seller)
+    get fun state(): State {
+        return State {
+            seller: self.seller,
+            request: Request {
+            my_jetton_sell_wallet: self.my_jetton_sell_wallet,
+            my_jetton_buy_wallet: self.my_jetton_buy_wallet,
+            jetton_sell_master: self.jetton_sell_master,
+            jetton_buy_master: self.jetton_buy_master,
+            amount_sell: self.amount_sell,
+            amount_buy: self.amount_buy,
+
+            timeout: self.timeout,
+            },
+            open: self.open,
+            close: self.close,
+        };
+    }
 }

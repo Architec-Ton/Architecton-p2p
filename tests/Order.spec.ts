@@ -1,36 +1,35 @@
 import { Blockchain, printTransactionFees, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, toNano } from '@ton/core';
-import { Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
+import { Order, Request, State, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
 import { Minter } from '../wrappers/jetton-minter';
 
-import { buildOnchainMetadata, storeJettonTransfer } from '../scripts/jetton-helpers';
+import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
 
-const sellJettonParams = {
-    name: "test USDT",
-    description: "This is description for test USDT",
-    symbol: "testUSDT",
-    image: "https://i.ibb.co/J3rk47X/USDT-ocean.webp"
-};
-let sellJettonContentMetadata = buildOnchainMetadata(sellJettonParams);
+async function checkStage(order: SandboxContract<Order>, seller: SandboxContract<TreasuryContract>, request: Request, checkStage: any) {
+    const currentState = await order.getState()
+    expect(currentState.seller.toString()).toEqual(seller.address.toString())
+    checkStage(currentState)
+    expect(currentState.request.my_jetton_sell_wallet.toString()).toEqual(request.my_jetton_sell_wallet.toString())
+    expect(currentState.request.my_jetton_buy_wallet.toString()).toEqual(request.my_jetton_buy_wallet.toString())
+    expect(currentState.request.jetton_sell_master.toString()).toEqual(request.jetton_sell_master.toString())
+    expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString())
+    expect(currentState.request.amount_buy).toEqual(request.amount_buy)
+    expect(currentState.request.amount_buy).toEqual(request.amount_buy)
+    expect(currentState.request.timeout).toEqual(request.timeout)
+}
 
-const buyJettonParams = {
-    name: "test NOT",
-    description: "This is description for test NOT",
-    symbol: "testNOT",
-    image: "https://i.ibb.co/J3rk47X/NOT-ocean.webp"
-};
-let buyJettonContentMetadata = buildOnchainMetadata(buyJettonParams);
+async function checkZeroStage(currentState: State) {
+    expect(currentState.open).toEqual(false)
+    expect(currentState.close).toEqual(false)
+}
 
-
-// const sellCode = Cell.fromBadse64('te6ccgEBAQEAIwAIQgKPRS16Tf10BmtoI2UXclntBXNENb52tf1L1divK3w9aA==')
-// const buyCode = Cell.fromBase64('te6ccgEBAQEAIwAIQgK6KRjIlH6bJa+awbiDNXdUFz5YEvgHo9bmQqFHCVlTlQ==')
-
-// const jettonSellMaster = Address.parse('EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs')
-// const jettonBuyMaster = Address.parse('EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT')
-
+async function checkFirstStage(currentState: State) {
+    expect(currentState.open).toEqual(true)
+    expect(currentState.close).toEqual(false)
+}
 
 describe('First stage', () => {
     let blockchain: Blockchain;
@@ -63,10 +62,10 @@ describe('First stage', () => {
     let request: Request;
 
     beforeEach(async () => {
-        sellWalletCode = await compile("jetton-wallet")//Cell.fromBoc(Buffer.from('b5ee9c72010101010023000842028f452d7a4dfd74066b682365177259ed05734435be76b5fd4bd5d8af2b7c3d68', "hex"))[0]
-        buyWalletCode = await compile('jetton-wallet')//Cell.fromBoc(Buffer.from('b5ee9c7201010101002300084202ba2918c8947e9b25af9ac1b883357754173e5812f807a3d6e642a14709595395', "hex"))[0]
-        sellMinterCode = Cell.fromBoc(Buffer.from('b5ee9c72010218010005bb000114ff00f4a413f4bcf2c80b0102016202030202cb0405020120141502f3d0cb434c0c05c6c238ecc200835c874c7c0608405e351466ea44c38601035c87e800c3b51343e803e903e90353534541168504d3214017e809400f3c58073c5b333327b55383e903e900c7e800c7d007e800c7e80004c5c3e0e80b4c7c04074cfc044bb51343e803e903e9035353449a084190adf41eeb8c089a0607001da23864658380e78b64814183fa0bc0019635355161c705f2e04904fa4021fa4430c000f2e14dfa00d4d120d0d31f018210178d4519baf2e0488040d721fa00fa4031fa4031fa0020d70b009ad74bc00101c001b0f2b19130e254431b0803fa82107bdd97deba8ee7363805fa00fa40f82854120a70546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d05008c705f2e04a12a14414506603c85005fa025003cf1601cf16ccccc9ed54fa40d120d70b01c000b3915be30de02682102c76b973bae30235250a0b0c018e2191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b025597f0900ec82103b9aca0070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb005005a04314c85005fa025003cf1601cf16ccccc9ed540044c8801001cb0501cf1670fa027001cb6a8210d53276db01cb1f0101cb3fc98042fb0001fc145f04323401fa40d2000101d195c821cf16c9916de2c8801001cb055004cf1670fa027001cb6a8210d173540001cb1f500401cb3f23fa4430c0008e35f828440470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d012cf1697316c127001cb01e2f400c90d04f882106501f354ba8e223134365145c705f2e04902fa40d1103402c85005fa025003cf1601cf16ccccc9ed54e0258210fb88e119ba8e2132343603d15131c705f2e0498b025512c85005fa025003cf1601cf16ccccc9ed54e034248210235caf52bae30237238210cb862902bae302365b2082102508d66abae3026c310e0f101100088050fb0002ec3031325033c705f2e049fa40fa00d4d120d0d31f01018040d7212182100f8a7ea5ba8e4d36208210595f07bcba8e2c3004fa0031fa4031f401d120f839206e943081169fde718102f270f8380170f836a0811a7770f836a0bcf2b08e138210eed236d3ba9504d30331d19434f2c048e2e2e30d50037012130044335142c705f2e049c85003cf16c9134440c85005fa025003cf1601cf16ccccc9ed54001e3002c705f2e049d4d4d101ed54fb0400188210d372158cbadc840ff2f000ce31fa0031fa4031fa4031f401fa0020d70b009ad74bc00101c001b0f2b19130e25442162191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b000c082103b9aca0070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb000025bd9adf6a2687d007d207d206a6a6888122f82402027116170085adbcf6a2687d007d207d206a6a688a2f827c1400b82a3002098a81e46581ac7d0100e78b00e78b6490e4658089fa00097a00658064fc80383a6465816503e5ffe4e84000cfaf16f6a2687d007d207d206a6a68bf99e836c1783872ebdb514d9c97c283b7f0ae5179029e2b6119c39462719e4f46ed8f7413e62c780a417877407e978f01a40711411b1acb773a96bdd93fa83bb5ca8435013c8c4b3ac91f4589b4780a38646583fa0064a18040', "hex"))[0]
-        buyMinterCode = Cell.fromBoc(Buffer.from('b5ee9c7201021601000494000114ff00f4a413f4bcf2c80b0102016202030202cb0405020120121302f5d0cb434c0c05c6c238ecc200835c874c7c0608405e351466ea44c38601035c87e800c3b51343e803e903e90353534541168504d3214017e809400f3c58073c5b333327b55383e903e900c7e800c7d007e800c7e80004c5c3e0e80b4c7c04074cfc044bb51343e803e903e9035353449a084190adf41eeb8c08e4960607001da23864658380e78b64814183fa0bc0019635355161c705f2e04904fa4021fa4430c000f2e14dfa00d4d120d0d31f018210178d4519baf2e0488040d721fa00fa4031fa4031fa0020d70b009ad74bc00101c001b0f2b19130e254431b0803f682107bdd97deba8ee53505fa00fa40f82854120770546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d05008c705f2e04a12a144145036c85005fa025003cf1601cf16ccccc9ed54fa40d120d70b01c000b3915be30de02582102c76b973bae30234240a0b0c018e2191729171e2f839206e938127519120e2216e94318128c39101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b025597f0900ea820898968070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb005005a04314c85005fa025003cf1601cf16ccccc9ed540044c8801001cb0501cf1670fa027001cb6a8210d53276db01cb1f0101cb3fc98042fb0001fe355f033401fa40d2000101d195c821cf16c9916de2c8801001cb055004cf1670fa027001cb6a8210d173540001cb1f500401cb3f23fa4430c0008e35f828440470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d012cf1697316c127001cb01e2f400c980500d04fe82106501f354ba8e2130335142c705f2e04902fa40d1400304c85005fa025003cf1601cf16ccccc9ed54e0248210fb88e119ba8e20313303d15131c705f2e0498b024034c85005fa025003cf1601cf16ccccc9ed54e02482107431f221bae30237238210cb862902bae302365b2082102508d66abae3026c318210d372158c0e0f10110004fb00004430335042c705f2e04901d18b028b024034c85005fa025003cf1601cf16ccccc9ed540044335142c705f2e049c85003cf16c9134440c85005fa025003cf1601cf16ccccc9ed54001e3002c705f2e049d4d4d101ed54fb04000cbadc840ff2f00025bd9adf6a2687d007d207d206a6a6888122f82402027114150085adbcf6a2687d007d207d206a6a688a2f827c1400b82a3002098a81e46581ac7d0100e78b00e78b6490e4658089fa00097a00658064fc80383a6465816503e5ffe4e84000cfaf16f6a2687d007d207d206a6a68bf99e836c1783872ebdb514d9c97c283b7f0ae5179029e2b6119c39462719e4f46ed8f7413e62c780a417877407e978f01a40711411b1acb773a96bdd93fa83bb5ca8435013c8c4b3ac91f4589cc780a38646583fa0064a18040', "hex"))[0]
+        sellWalletCode = await compile("jetton-wallet")
+        buyWalletCode = await compile('jetton-wallet')
+        sellMinterCode = await compile('jetton-minter')
+        buyMinterCode = await compile('jetton-minter')
 
         blockchain = await Blockchain.create();
         deployer = await blockchain.treasury('deployer');
@@ -81,7 +80,7 @@ describe('First stage', () => {
                     admin_address: deployer.address,
                     next_admin_address: treasury.address,
                     jetton_wallet_code: sellWalletCode,
-                    metadata_url: sellJettonContentMetadata
+                    metadata_url: beginCell().storeBit(1).endCell()
                 },
                 sellMinterCode
             )
@@ -94,7 +93,7 @@ describe('First stage', () => {
                     admin_address: deployer.address,
                     next_admin_address: treasury.address,
                     jetton_wallet_code: buyWalletCode,
-                    metadata_url: buyJettonContentMetadata
+                    metadata_url: beginCell().storeBit(0).endCell()
                 },
                 buyMinterCode
             )
@@ -288,13 +287,16 @@ describe('First stage', () => {
             $$type: 'Request',
             my_jetton_sell_wallet: sellJettonWalletOrder.address,
             my_jetton_buy_wallet: buyJettonWalletOrder.address,
+            jetton_sell_master: sellMinter.address,
+            jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
+            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100),
         }
 
         const deployResult = await seller.send(
             {
-                value: toNano(0.01),
+                value: toNano(0.1),
                 to: order.address,
                 sendMode: 2,
                 bounce: false,
@@ -323,6 +325,7 @@ describe('First stage', () => {
     it('should deploy & mint & transfer jettons', async () => {
         // the check is done inside beforeEach
         // blockchain and order are ready to use
+        await checkStage(order, seller, request, checkZeroStage)
     }, 100000000);
 
     it('another err message', async () => {
@@ -339,6 +342,8 @@ describe('First stage', () => {
             success: false,
             exitCode: 130
         })
+
+        await checkStage(order, seller, request, checkZeroStage)
     }, 100000000)
 
     it('cancelled message', async () => {
@@ -356,6 +361,8 @@ describe('First stage', () => {
             success: false,
             exitCode: 133
         })
+
+        await checkStage(order, seller, request, checkZeroStage)
     }, 100000000)
 
     it('notify from any Wallet', async () => {
@@ -383,6 +390,8 @@ describe('First stage', () => {
             success: false,
             exitCode: 136
         })
+
+        await checkStage(order, seller, request, checkZeroStage)
     }, 100000000)
 
     it('notify from errJettonWalletOrder', async () => {
@@ -479,6 +488,8 @@ describe('First stage', () => {
             success: false,
             exitCode: 136
         })
+
+        await checkStage(order, seller, request, checkZeroStage)
     }, 100000000)
 
     it('notify from buyJettonWalletOrder', async () => {
@@ -515,6 +526,8 @@ describe('First stage', () => {
             success: false,
             exitCode: 40
         })
+
+        await checkStage(order, seller, request, checkZeroStage)
     }, 100000000)
 
     it('notify from sellJettonWalletOrder -> jetton sender != owner', async () => {
@@ -551,6 +564,8 @@ describe('First stage', () => {
             success: false,
             exitCode: 132
         })
+
+        await checkStage(order, seller, request, checkZeroStage)
     }, 100000000)
 
     it('notify from sellJettonWalletOrder -> jetton sender == owner -> with the wrong amount', async () => {
@@ -587,6 +602,8 @@ describe('First stage', () => {
             success: false,
             exitCode: 39
         })
+
+        await checkStage(order, seller, request, checkZeroStage)
     }, 100000000)
 
     it('main flow', async () => {
@@ -630,6 +647,8 @@ describe('First stage', () => {
 
         expect(sellJettonOrderBalance).toEqual(request.amount_sell)
         expect(sellJettonSellerBalance).toEqual(9999999990n)
+
+        await checkStage(order, seller, request, checkFirstStage)
     }, 100000000)
 });
 
@@ -665,10 +684,10 @@ describe('Second stage', () => {
     let request: Request;
 
     beforeEach(async () => {
-        sellWalletCode = await compile("jetton-wallet")//Cell.fromBoc(Buffer.from('b5ee9c72010101010023000842028f452d7a4dfd74066b682365177259ed05734435be76b5fd4bd5d8af2b7c3d68', "hex"))[0]
+        sellWalletCode = await compile("jetton-wallet")
         buyWalletCode = await compile('jetton-wallet')
-        sellMinterCode = await compile('jetton-minter');//Cell.fromBoc(Buffer.from('b5ee9c72010218010005bb000114ff00f4a413f4bcf2c80b0102016202030202cb0405020120141502f3d0cb434c0c05c6c238ecc200835c874c7c0608405e351466ea44c38601035c87e800c3b51343e803e903e90353534541168504d3214017e809400f3c58073c5b333327b55383e903e900c7e800c7d007e800c7e80004c5c3e0e80b4c7c04074cfc044bb51343e803e903e9035353449a084190adf41eeb8c089a0607001da23864658380e78b64814183fa0bc0019635355161c705f2e04904fa4021fa4430c000f2e14dfa00d4d120d0d31f018210178d4519baf2e0488040d721fa00fa4031fa4031fa0020d70b009ad74bc00101c001b0f2b19130e254431b0803fa82107bdd97deba8ee7363805fa00fa40f82854120a70546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d05008c705f2e04a12a14414506603c85005fa025003cf1601cf16ccccc9ed54fa40d120d70b01c000b3915be30de02682102c76b973bae30235250a0b0c018e2191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b025597f0900ec82103b9aca0070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb005005a04314c85005fa025003cf1601cf16ccccc9ed540044c8801001cb0501cf1670fa027001cb6a8210d53276db01cb1f0101cb3fc98042fb0001fc145f04323401fa40d2000101d195c821cf16c9916de2c8801001cb055004cf1670fa027001cb6a8210d173540001cb1f500401cb3f23fa4430c0008e35f828440470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d012cf1697316c127001cb01e2f400c90d04f882106501f354ba8e223134365145c705f2e04902fa40d1103402c85005fa025003cf1601cf16ccccc9ed54e0258210fb88e119ba8e2132343603d15131c705f2e0498b025512c85005fa025003cf1601cf16ccccc9ed54e034248210235caf52bae30237238210cb862902bae302365b2082102508d66abae3026c310e0f101100088050fb0002ec3031325033c705f2e049fa40fa00d4d120d0d31f01018040d7212182100f8a7ea5ba8e4d36208210595f07bcba8e2c3004fa0031fa4031f401d120f839206e943081169fde718102f270f8380170f836a0811a7770f836a0bcf2b08e138210eed236d3ba9504d30331d19434f2c048e2e2e30d50037012130044335142c705f2e049c85003cf16c9134440c85005fa025003cf1601cf16ccccc9ed54001e3002c705f2e049d4d4d101ed54fb0400188210d372158cbadc840ff2f000ce31fa0031fa4031fa4031f401fa0020d70b009ad74bc00101c001b0f2b19130e25442162191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b000c082103b9aca0070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb000025bd9adf6a2687d007d207d206a6a6888122f82402027116170085adbcf6a2687d007d207d206a6a688a2f827c1400b82a3002098a81e46581ac7d0100e78b00e78b6490e4658089fa00097a00658064fc80383a6465816503e5ffe4e84000cfaf16f6a2687d007d207d206a6a68bf99e836c1783872ebdb514d9c97c283b7f0ae5179029e2b6119c39462719e4f46ed8f7413e62c780a417877407e978f01a40711411b1acb773a96bdd93fa83bb5ca8435013c8c4b3ac91f4589b4780a38646583fa0064a18040', "hex"))[0]
-        buyMinterCode = Cell.fromBoc(Buffer.from('b5ee9c72010218010005bb000114ff00f4a413f4bcf2c80b0102016202030202cb0405020120141502f3d0cb434c0c05c6c238ecc200835c874c7c0608405e351466ea44c38601035c87e800c3b51343e803e903e90353534541168504d3214017e809400f3c58073c5b333327b55383e903e900c7e800c7d007e800c7e80004c5c3e0e80b4c7c04074cfc044bb51343e803e903e9035353449a084190adf41eeb8c089a0607001da23864658380e78b64814183fa0bc0019635355161c705f2e04904fa4021fa4430c000f2e14dfa00d4d120d0d31f018210178d4519baf2e0488040d721fa00fa4031fa4031fa0020d70b009ad74bc00101c001b0f2b19130e254431b0803fa82107bdd97deba8ee7363805fa00fa40f82854120a70546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d05008c705f2e04a12a14414506603c85005fa025003cf1601cf16ccccc9ed54fa40d120d70b01c000b3915be30de02682102c76b973bae30235250a0b0c018e2191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b025597f0900ec82103b9aca0070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb005005a04314c85005fa025003cf1601cf16ccccc9ed540044c8801001cb0501cf1670fa027001cb6a8210d53276db01cb1f0101cb3fc98042fb0001fc145f04323401fa40d2000101d195c821cf16c9916de2c8801001cb055004cf1670fa027001cb6a8210d173540001cb1f500401cb3f23fa4430c0008e35f828440470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d012cf1697316c127001cb01e2f400c90d04f882106501f354ba8e223134365145c705f2e04902fa40d1103402c85005fa025003cf1601cf16ccccc9ed54e0258210fb88e119ba8e2132343603d15131c705f2e0498b025512c85005fa025003cf1601cf16ccccc9ed54e034248210235caf52bae30237238210cb862902bae302365b2082102508d66abae3026c310e0f101100088050fb0002ec3031325033c705f2e049fa40fa00d4d120d0d31f01018040d7212182100f8a7ea5ba8e4d36208210595f07bcba8e2c3004fa0031fa4031f401d120f839206e943081169fde718102f270f8380170f836a0811a7770f836a0bcf2b08e138210eed236d3ba9504d30331d19434f2c048e2e2e30d50037012130044335142c705f2e049c85003cf16c9134440c85005fa025003cf1601cf16ccccc9ed54001e3002c705f2e049d4d4d101ed54fb0400188210d372158cbadc840ff2f000ce31fa0031fa4031fa4031f401fa0020d70b009ad74bc00101c001b0f2b19130e25442162191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b000c082103b9aca0070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb000025bd9adf6a2687d007d207d206a6a6888122f82402027116170085adbcf6a2687d007d207d206a6a688a2f827c1400b82a3002098a81e46581ac7d0100e78b00e78b6490e4658089fa00097a00658064fc80383a6465816503e5ffe4e84000cfaf16f6a2687d007d207d206a6a68bf99e836c1783872ebdb514d9c97c283b7f0ae5179029e2b6119c39462719e4f46ed8f7413e62c780a417877407e978f01a40711411b1acb773a96bdd93fa83bb5ca8435013c8c4b3ac91f4589b4780a38646583fa0064a18040', "hex"))[0]
+        sellMinterCode = await compile('jetton-minter')
+        buyMinterCode = await compile('jetton-minter')
 
         blockchain = await Blockchain.create();
         deployer = await blockchain.treasury('deployer');
@@ -683,7 +702,7 @@ describe('Second stage', () => {
                     admin_address: deployer.address,
                     next_admin_address: treasury.address,
                     jetton_wallet_code: sellWalletCode,
-                    metadata_url: sellJettonContentMetadata
+                    metadata_url: beginCell().storeBit(1).endCell()
                 },
                 sellMinterCode
             )
@@ -696,7 +715,7 @@ describe('Second stage', () => {
                     admin_address: deployer.address,
                     next_admin_address: treasury.address,
                     jetton_wallet_code: buyWalletCode,
-                    metadata_url: buyJettonContentMetadata
+                    metadata_url: beginCell().storeBit(0).endCell()
                 },
                 buyMinterCode
             )
@@ -852,13 +871,16 @@ describe('Second stage', () => {
             $$type: 'Request',
             my_jetton_sell_wallet: sellJettonWalletOrder.address,
             my_jetton_buy_wallet: buyJettonWalletOrder.address,
+            jetton_sell_master: sellMinter.address,
+            jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
+            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100),
         }
 
         const deployResult = await seller.send(
             {
-                value: toNano(0.015),
+                value: toNano(0.02),
                 to: order.address,
                 sendMode: 2,
                 bounce: false,
@@ -908,6 +930,7 @@ describe('Second stage', () => {
     it('should deploy & mint & transfer jettons', async () => {
         // the check is done inside beforeEach
         // blockchain and order are ready to use
+        await checkStage(order, seller, request, checkFirstStage)
     }, 100000000);
 
     it('another err message', async () => {
@@ -924,6 +947,8 @@ describe('Second stage', () => {
             success: false,
             exitCode: 130
         })
+
+        await checkStage(order, seller, request, checkFirstStage)
     }, 100000000)
 
     it('cancelled message -> sender != owner', async () => {
@@ -941,6 +966,8 @@ describe('Second stage', () => {
             success: false,
             exitCode: 132
         })
+
+        await checkStage(order, seller, request, checkFirstStage)
     }, 100000000)
 
     it('cancelled message -> sender == owner', async () => {
@@ -996,6 +1023,8 @@ describe('Second stage', () => {
             success: false,
             exitCode: 136
         })
+
+        await checkStage(order, seller, request, checkFirstStage)
     }, 100000000)
 
     it('notify from errJettonWalletOrder', async () => {
@@ -1092,9 +1121,9 @@ describe('Second stage', () => {
             success: false,
             exitCode: 136
         })
-    }, 100000000)
 
-    // todo: узнать что делать
+        await checkStage(order, seller, request, checkFirstStage)
+    }, 100000000)
 
     it('notify from sellJettonWalletOrder', async () => {
         const sellTransferBody = beginCell()
@@ -1129,9 +1158,50 @@ describe('Second stage', () => {
             success: false,
             exitCode: 41
         })
+
+        await checkStage(order, seller, request, checkFirstStage)
     }, 100000000)
 
-    it('notify from buyJettonWalletOrder -> with the wrong amount', async () => {
+    it('notify from buyJettonWalletOrder -> with the wrong timeout', async () => {
+        blockchain.now = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 1000
+        const buyTransferBody = beginCell()
+            .store(storeJettonTransfer({
+                $$type: 'JettonTransfer',
+                query_id: 0n,
+                amount: 9n,
+                destination: order.address,
+                response_destination: order.address,
+                custom_payload: beginCell().endCell(),
+                forward_ton_amount: toNano(0.1),
+                forward_payload: beginCell().endCell().asSlice(),
+            }))
+            .endCell()
+
+        const buyJettonTransferResult = await buyer.send({
+            value: toNano(1),
+            to: buyJettonWalletBuyer.address,
+            sendMode: 2,
+            body: buyTransferBody
+        })
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletBuyer.address,
+            to: buyJettonWalletOrder.address,
+            deploy: true,
+            success: true
+        })
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletOrder.address,
+            to: order.address,
+            success: false,
+            exitCode: 42
+        })
+
+        await checkStage(order, seller, request, checkFirstStage)
+    }, 100000000)
+
+    it('notify from buyJettonWalletOrder -> with the right timeout -> with the wrong amount', async () => {
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
                 $$type: 'JettonTransfer',
@@ -1165,6 +1235,8 @@ describe('Second stage', () => {
             success: false,
             exitCode: 39
         })
+
+        await checkStage(order, seller, request, checkFirstStage)
     }, 100000000)
 
     it('main flow', async () => {
