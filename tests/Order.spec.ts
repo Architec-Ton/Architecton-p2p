@@ -1,6 +1,6 @@
 import { Blockchain, printTransactionFees, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, toNano } from '@ton/core';
-import { Order, Request, State, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
+import { Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
 import { Minter } from '../wrappers/jetton-minter';
@@ -8,10 +8,11 @@ import { Minter } from '../wrappers/jetton-minter';
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
 
-async function checkStage(order: SandboxContract<Order>, seller: SandboxContract<TreasuryContract>, request: Request, checkStage: any) {
+async function checkStage(order: SandboxContract<Order>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState()
     expect(currentState.seller.toString()).toEqual(seller.address.toString())
-    checkStage(currentState)
+    expect(currentState.open).toEqual(open)
+
     expect(currentState.request.my_jetton_sell_wallet.toString()).toEqual(request.my_jetton_sell_wallet.toString())
     expect(currentState.request.my_jetton_buy_wallet.toString()).toEqual(request.my_jetton_buy_wallet.toString())
     expect(currentState.request.jetton_sell_master.toString()).toEqual(request.jetton_sell_master.toString())
@@ -19,16 +20,6 @@ async function checkStage(order: SandboxContract<Order>, seller: SandboxContract
     expect(currentState.request.amount_buy).toEqual(request.amount_buy)
     expect(currentState.request.amount_buy).toEqual(request.amount_buy)
     expect(currentState.request.timeout).toEqual(request.timeout)
-}
-
-async function checkZeroStage(currentState: State) {
-    expect(currentState.open).toEqual(false)
-    expect(currentState.close).toEqual(false)
-}
-
-async function checkFirstStage(currentState: State) {
-    expect(currentState.open).toEqual(true)
-    expect(currentState.close).toEqual(false)
 }
 
 describe('First stage', () => {
@@ -325,7 +316,7 @@ describe('First stage', () => {
     it('should deploy & mint & transfer jettons', async () => {
         // the check is done inside beforeEach
         // blockchain and order are ready to use
-        await checkStage(order, seller, request, checkZeroStage)
+        await checkStage(order, seller, request, false)
     }, 100000000);
 
     it('another err message', async () => {
@@ -343,7 +334,7 @@ describe('First stage', () => {
             exitCode: 130
         })
 
-        await checkStage(order, seller, request, checkZeroStage)
+        await checkStage(order, seller, request, false)
     }, 100000000)
 
     it('cancelled message', async () => {
@@ -362,7 +353,7 @@ describe('First stage', () => {
             exitCode: 133
         })
 
-        await checkStage(order, seller, request, checkZeroStage)
+        await checkStage(order, seller, request, false)
     }, 100000000)
 
     it('notify from any Wallet', async () => {
@@ -391,7 +382,7 @@ describe('First stage', () => {
             exitCode: 136
         })
 
-        await checkStage(order, seller, request, checkZeroStage)
+        await checkStage(order, seller, request, false)
     }, 100000000)
 
     it('notify from errJettonWalletOrder', async () => {
@@ -489,7 +480,7 @@ describe('First stage', () => {
             exitCode: 136
         })
 
-        await checkStage(order, seller, request, checkZeroStage)
+        await checkStage(order, seller, request, false)
     }, 100000000)
 
     it('notify from buyJettonWalletOrder', async () => {
@@ -527,7 +518,7 @@ describe('First stage', () => {
             exitCode: 40
         })
 
-        await checkStage(order, seller, request, checkZeroStage)
+        await checkStage(order, seller, request, false)
     }, 100000000)
 
     it('notify from sellJettonWalletOrder -> jetton sender != owner', async () => {
@@ -565,7 +556,7 @@ describe('First stage', () => {
             exitCode: 132
         })
 
-        await checkStage(order, seller, request, checkZeroStage)
+        await checkStage(order, seller, request, false)
     }, 100000000)
 
     it('notify from sellJettonWalletOrder -> jetton sender == owner -> with the wrong amount', async () => {
@@ -603,7 +594,7 @@ describe('First stage', () => {
             exitCode: 39
         })
 
-        await checkStage(order, seller, request, checkZeroStage)
+        await checkStage(order, seller, request, false)
     }, 100000000)
 
     it('main flow', async () => {
@@ -648,7 +639,7 @@ describe('First stage', () => {
         expect(sellJettonOrderBalance).toEqual(request.amount_sell)
         expect(sellJettonSellerBalance).toEqual(9999999990n)
 
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000)
 });
 
@@ -930,7 +921,7 @@ describe('Second stage', () => {
     it('should deploy & mint & transfer jettons', async () => {
         // the check is done inside beforeEach
         // blockchain and order are ready to use
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000);
 
     it('another err message', async () => {
@@ -948,7 +939,7 @@ describe('Second stage', () => {
             exitCode: 130
         })
 
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000)
 
     it('cancelled message -> sender != owner', async () => {
@@ -967,7 +958,7 @@ describe('Second stage', () => {
             exitCode: 132
         })
 
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000)
 
     it('cancelled message -> sender == owner', async () => {
@@ -1024,7 +1015,7 @@ describe('Second stage', () => {
             exitCode: 136
         })
 
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000)
 
     it('notify from errJettonWalletOrder', async () => {
@@ -1122,7 +1113,7 @@ describe('Second stage', () => {
             exitCode: 136
         })
 
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000)
 
     it('notify from sellJettonWalletOrder', async () => {
@@ -1159,7 +1150,7 @@ describe('Second stage', () => {
             exitCode: 41
         })
 
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000)
 
     it('notify from buyJettonWalletOrder -> with the wrong timeout', async () => {
@@ -1198,7 +1189,7 @@ describe('Second stage', () => {
             exitCode: 42
         })
 
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000)
 
     it('notify from buyJettonWalletOrder -> with the right timeout -> with the wrong amount', async () => {
@@ -1236,7 +1227,7 @@ describe('Second stage', () => {
             exitCode: 39
         })
 
-        await checkStage(order, seller, request, checkFirstStage)
+        await checkStage(order, seller, request, true)
     }, 100000000)
 
     it('main flow', async () => {

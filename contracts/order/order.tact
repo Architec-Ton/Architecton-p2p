@@ -1,3 +1,5 @@
+import "./JettonMessages";
+
 message Request {
     my_jetton_sell_wallet: Address;
     my_jetton_buy_wallet: Address;
@@ -13,24 +15,6 @@ struct State {
     seller: Address;
     request: Request;
     open: Bool;
-    close: Bool;
-}
-
-message(0x7362d09c) JettonTransferNotification {
-    query_id: Int as uint64;                // arbitrary request number
-    amount: Int as coins;                   // amount of jettons to transfer
-    sender: Address;                        // address of the sender of the jettons
-    forward_payload: Slice as remaining;    // optional custom payload
-}
-
-message(0x0f8a7ea5) JettonTransfer {
-    query_id: Int as uint64;                // arbitrary request number
-    amount: Int as coins;                   // amount of jettons to transfer
-    destination: Address;                   // address of the new seller of the jettons
-    response_destination: Address;          // address where to send a response with confirmation of a successful transfer and the rest of the incoming message Toncoins.
-    custom_payload: Cell?;                  // optional custom payload
-    forward_ton_amount: Int as coins;       // the amount of nanotons to be sent to the destination address.
-    forward_payload: Slice?;    // optional custom data that should be sent to the destination address.
 }
 
 const jetton_transfer_fee: Int = ton("0.018586"); // ~ 0.04 TON, medium fee for any amount of Jetton is 0.037 TON - docs
@@ -56,14 +40,13 @@ contract Order {
     timeout: Int = 0;
 
     open: Bool = false;
-    close: Bool = false;
 
     init(seller: Address, time: Int) {
         self.seller = seller;
     }
 
     receive(request: Request) {
-        nativeThrowUnless(order_already_opened, !self.close && !self.open);
+        nativeThrowUnless(order_already_opened, !self.open);
 
         self.my_jetton_sell_wallet = request.my_jetton_sell_wallet;
         self.my_jetton_buy_wallet = request.my_jetton_buy_wallet;
@@ -79,7 +62,6 @@ contract Order {
 
     fun withdraw() {
         self.open = false;
-        self.close = true;
 
         send(SendParameters{
             to: self.seller,
@@ -91,8 +73,6 @@ contract Order {
     }
 
     receive(notify: JettonTransferNotification) {
-        nativeThrowUnless(order_closed, !self.close);
-
         let sender: Address = context().sender;
 
         if (sender == self.my_jetton_sell_wallet) {
@@ -146,7 +126,7 @@ contract Order {
     }
 
     receive("cancel") {
-        nativeThrowUnless(order_closed, self.open && !self.close);
+        nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
 
         send(SendParameters{
@@ -182,7 +162,6 @@ contract Order {
             timeout: self.timeout,
             },
             open: self.open,
-            close: self.close,
         };
     }
 }
