@@ -1,16 +1,17 @@
 import { Address, beginCell, toNano } from '@ton/core';
 import { Order, Request, storeRequest } from '../wrappers/Order';
 import { NetworkProvider } from '@ton/blueprint';
-import { calculateUSDTWallet } from '../wrappers/jettonAddressesCalculation';
+import { masters } from './imports/consts';
+import { getJettonWallet } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
-    const sellJettonMaster = Address.parse('EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs');
-    const buyJettonMaster = Address.parse('EQAvlWFDxGF2lXm67y4yzC17wYKD9A0guwPkMs1gOsM__NOT');
+    const sellJettonMaster = Address.parse(masters.get('BNK')!!);
+    const buyJettonMaster = Address.parse(masters.get('ARC')!!);
 
-    const order = provider.open(await Order.fromInit(provider.sender().address!!, BigInt(Math.floor(Date.now()))));
+    const order = provider.open(await Order.fromInit(provider.sender().address!!, BigInt(Date.now())));
 
-    const sellJettonWallet = await calculateUSDTWallet(sellJettonMaster, order.address);
-    const buyJettonWallet = await calculateUSDTWallet(buyJettonMaster, order.address);
+    const sellJettonWallet = await getJettonWallet(sellJettonMaster, order.address);
+    const buyJettonWallet = await getJettonWallet(buyJettonMaster, order.address);
 
     const timeout = 60 * 60 * 24 * 100;
 
@@ -28,7 +29,6 @@ export async function run(provider: NetworkProvider) {
     await provider.sender().send({
             value: toNano(0.02),
             to: order.address,
-            sendMode: 2,
             bounce: false,
             init: order.init,
             body: beginCell().store(storeRequest(request)).endCell()
@@ -37,6 +37,6 @@ export async function run(provider: NetworkProvider) {
 
     await provider.waitForDeploy(order.address);
 
-    const state = await order.getState()
-    console.log(state)
+    // const state = await order.getState()
+    // console.log(state)
 }

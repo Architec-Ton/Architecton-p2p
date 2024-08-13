@@ -1239,13 +1239,13 @@ describe('Second stage', () => {
                 destination: order.address,
                 response_destination: order.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.030113),
+                forward_ton_amount: toNano(0.090113),
                 forward_payload: beginCell().endCell().asSlice(),
             }))
             .endCell()
 
         const buyJettonTransferResult = await buyer.send({
-            value: toNano(0.0472),
+            value: toNano(0.1072),
             to: buyJettonWalletBuyer.address,
             sendMode: 2,
             body: buyTransferBody

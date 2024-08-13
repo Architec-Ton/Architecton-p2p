@@ -17,7 +17,7 @@ struct State {
     open: Bool;
 }
 
-const jetton_transfer_fee: Int = ton("0.018586"); // ~ 0.04 TON, medium fee for any amount of Jetton is 0.037 TON - docs
+const jetton_transfer_fee: Int = ton("0.04"); // ~ 0.04 TON, medium fee for any amount of Jetton is 0.037 TON - docs
 const invalid_address: Int = 136;
 const access_denided: Int = 132;
 const order_closed: Int = 133;

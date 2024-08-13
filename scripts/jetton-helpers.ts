@@ -1,5 +1,7 @@
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {Dictionary, beginCell, Cell, Address, Builder, Slice} from "@ton/core";
+import {client} from "./imports/consts"
+import { parseDict } from '@ton/core/dist/dict/parseDict';
 
 const ONCHAIN_CONTENT_PREFIX = 0x00;
 const SNAKE_PREFIX = 0x00;
@@ -16,17 +18,6 @@ const toKey = (key: string) => {
 };
 
 export function buildOnchainMetadata(data: { name: string; description: string; image: string }): Cell {
-    let dict = Dictionary.empty(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
-
-    // Store the on-chain metadata in the dictionary
-    Object.entries(data).forEach(([key, value]) => {
-        dict.set(toKey(key), makeSnakeCell(Buffer.from(value, "utf8")));
-    });
-
-    return beginCell().storeInt(ONCHAIN_CONTENT_PREFIX, 8).storeDict(dict).endCell();
-}
-
-export function buildOnchainUSDTMetadata(data: { uri: string; decimals: string; }): Cell {
     let dict = Dictionary.empty(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
 
     // Store the on-chain metadata in the dictionary
@@ -89,4 +80,79 @@ export function storeJettonTransfer(src: JettonTransfer) {
         b_0.storeUint(0, 1);
         // b_0.storeBuilder(src.forward_payload.asBuilder());
     };
+}
+
+export async function getJettonWallet(jettonMaster: Address, owner: Address) {
+    const {gas_used, stack} = await client.runMethod(jettonMaster, 'get_wallet_address', [
+        {
+            type: 'slice',
+            cell: beginCell().storeAddress(owner).endCell()
+        }
+    ])
+
+    return stack.readAddressOpt()!!
+}
+
+export type JettonData = {
+    $$type: 'JettonData';
+    total_supply: bigint;
+    mintable: boolean;
+    admin_address: Address;
+    jetton_content: Cell;
+    jetton_wallet_code: Cell;
+}
+
+export function loadJettonData(slice: Slice) {
+    let sc_0 = slice;
+    let _total_supply = sc_0.loadCoins();
+    let _mintable = sc_0.loadBit();
+    let _admin_address = sc_0.loadAddress();
+    let _jetton_content = sc_0.loadRef();
+    let _jetton_wallet_code = sc_0.loadRef();
+    return { $$type: 'JettonData' as const, total_supply: _total_supply, mintable: _mintable, admin_address: _admin_address, jetton_content: _jetton_content, jetton_wallet_code: _jetton_wallet_code };
+}
+
+export async function getJettonDecimals(jettonMaster: Address) {
+    const {gas_used, stack} = await client.runMethod(jettonMaster, 'get_jetton_data')
+    const total_supply = stack.readNumber()
+    const mintable = stack.readBoolean()
+    const admin_address = stack.readAddress()
+    const jetton_content = stack.readCell()
+    const jetton_wallet_code = stack.readCell()
+
+    const getKeys = async () => {
+        const metadataKeys = new Map<bigint, string>()
+        const metadata = ['name', 'description', 'symbol', 'image_data', 'decimals'];
+
+        for (let i of metadata) {
+            const sha256View = await sha256(i)
+            let b = 0n, c = 1n << 248n
+            for (let byte of sha256View) {
+                b += BigInt(byte) * c
+                c /= 256n
+            }
+            metadataKeys.set(b, i)
+        }
+
+        return metadataKeys;
+    }
+
+    const hasMap = parseDict(jetton_content.refs[0].beginParse(), 256, (src) => src)
+    const deserializeHashMap = new Map<string, string>()
+    const metadataKeys = await getKeys()
+
+    for (let [intKey, stringKey] of metadataKeys) {
+        const value = hasMap.get(intKey)!.loadStringTail().split('\x00')[1]
+        deserializeHashMap.set(stringKey, value)
+    }
+
+    const jettonContent = {
+        name: deserializeHashMap.get('name'),
+        description: deserializeHashMap.get('description'),
+        symbol: deserializeHashMap.get('symbol'),
+        image_data: deserializeHashMap.get('image_data'),
+        decimals: deserializeHashMap.get('decimals')
+    }
+
+    return Number(jettonContent.decimals!)
 }
