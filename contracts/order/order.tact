@@ -46,6 +46,7 @@ contract Order {
     }
 
     receive(request: Request) {
+        nativeThrowUnless(access_denided, context().sender == self.seller);
         nativeThrowUnless(order_already_opened, !self.open);
 
         self.my_jetton_sell_wallet = request.my_jetton_sell_wallet;
