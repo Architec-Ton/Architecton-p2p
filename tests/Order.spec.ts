@@ -1,6 +1,6 @@
 import { Blockchain, printTransactionFees, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, toNano } from '@ton/core';
-import { Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
+import { OrderSellTon, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
 import { Minter } from '../wrappers/jetton-minter';
@@ -8,7 +8,7 @@ import { Minter } from '../wrappers/jetton-minter';
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
 
-async function checkStage(order: SandboxContract<Order>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
+async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState()
     expect(currentState.seller.toString()).toEqual(seller.address.toString())
     expect(currentState.open).toEqual(open)
@@ -40,7 +40,7 @@ describe('First stage', () => {
 
     let seller: SandboxContract<TreasuryContract>;
     let buyer: SandboxContract<TreasuryContract>;
-    let order: SandboxContract<Order>;
+    let order: SandboxContract<OrderSellTon>;
 
     let sellWalletCode: Cell;
     let buyWalletCode: Cell;
@@ -256,7 +256,7 @@ describe('First stage', () => {
         });
 
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Math.floor(Date.now() / 1000))));
+        order = blockchain.openContract(await OrderSellTon.fromInit(seller.address, BigInt(Math.floor(Date.now() / 1000))));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -662,7 +662,7 @@ describe('Second stage', () => {
 
     let seller: SandboxContract<TreasuryContract>;
     let buyer: SandboxContract<TreasuryContract>;
-    let order: SandboxContract<Order>;
+    let order: SandboxContract<OrderSellTon>;
 
     let sellWalletCode: Cell;
     let buyWalletCode: Cell;
@@ -840,7 +840,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Math.floor(Date.now() / 1000))));
+        order = blockchain.openContract(await OrderSellTon.fromInit(seller.address, BigInt(Math.floor(Date.now() / 1000))));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
