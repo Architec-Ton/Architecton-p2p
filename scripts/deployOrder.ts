@@ -17,8 +17,8 @@ export async function run(provider: NetworkProvider) {
 
     const request: Request = {
         $$type: 'Request',
-        my_jetton_sell_wallet: sellJettonWallet,
-        my_jetton_buy_wallet: buyJettonWallet,
+        order_jetton_sell_wallet: sellJettonWallet,
+        order_jetton_buy_wallet: buyJettonWallet,
         jetton_sell_master: sellJettonMaster,
         jetton_buy_master: buyJettonMaster,
         amount_sell: 10n,
