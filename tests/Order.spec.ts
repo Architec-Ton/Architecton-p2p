@@ -13,8 +13,8 @@ async function checkStage(order: SandboxContract<Order>, seller: SandboxContract
     expect(currentState.seller.toString()).toEqual(seller.address.toString())
     expect(currentState.open).toEqual(open)
 
-    expect(currentState.request.my_jetton_sell_wallet.toString()).toEqual(request.my_jetton_sell_wallet.toString())
-    expect(currentState.request.my_jetton_buy_wallet.toString()).toEqual(request.my_jetton_buy_wallet.toString())
+    expect(currentState.request.order_jetton_sell_wallet.toString()).toEqual(request.order_jetton_sell_wallet.toString())
+    expect(currentState.request.order_jetton_buy_wallet.toString()).toEqual(request.order_jetton_buy_wallet.toString())
     expect(currentState.request.jetton_sell_master.toString()).toEqual(request.jetton_sell_master.toString())
     expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString())
     expect(currentState.request.amount_buy).toEqual(request.amount_buy)
@@ -276,8 +276,8 @@ describe('First stage', () => {
 
         request = {
             $$type: 'Request',
-            my_jetton_sell_wallet: sellJettonWalletOrder.address,
-            my_jetton_buy_wallet: buyJettonWalletOrder.address,
+            order_jetton_sell_wallet: sellJettonWalletOrder.address,
+            order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
             jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
@@ -860,8 +860,8 @@ describe('Second stage', () => {
 
         request = {
             $$type: 'Request',
-            my_jetton_sell_wallet: sellJettonWalletOrder.address,
-            my_jetton_buy_wallet: buyJettonWalletOrder.address,
+            order_jetton_sell_wallet: sellJettonWalletOrder.address,
+            order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
             jetton_buy_master: buyMinter.address,
             amount_sell: 10n,

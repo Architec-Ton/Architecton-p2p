@@ -1,8 +1,8 @@
 import "./JettonMessages";
 
 message Request {
-    my_jetton_sell_wallet: Address;
-    my_jetton_buy_wallet: Address;
+    order_jetton_sell_wallet: Address;
+    order_jetton_buy_wallet: Address;
     jetton_sell_master: Address;
     jetton_buy_master: Address;
     amount_sell: Int as coins;
@@ -29,8 +29,8 @@ const invalid_timeout: Int = 42;
 contract Order {
     seller: Address;
 
-    my_jetton_buy_wallet: Address = newAddress(0,0);
-    my_jetton_sell_wallet: Address = newAddress(0,0);
+    order_jetton_buy_wallet: Address = newAddress(0,0);
+    order_jetton_sell_wallet: Address = newAddress(0,0);
     jetton_sell_master: Address = newAddress(0,0);
     jetton_buy_master: Address = newAddress(0,0);
 
@@ -49,8 +49,8 @@ contract Order {
         nativeThrowUnless(access_denided, context().sender == self.seller);
         nativeThrowUnless(order_already_opened, !self.open);
 
-        self.my_jetton_sell_wallet = request.my_jetton_sell_wallet;
-        self.my_jetton_buy_wallet = request.my_jetton_buy_wallet;
+        self.order_jetton_sell_wallet = request.order_jetton_sell_wallet;
+        self.order_jetton_buy_wallet = request.order_jetton_buy_wallet;
 
         self.jetton_sell_master = request.jetton_sell_master;
         self.jetton_buy_master = request.jetton_buy_master;
@@ -76,12 +76,12 @@ contract Order {
     receive(notify: JettonTransferNotification) {
         let sender: Address = context().sender;
 
-        if (sender == self.my_jetton_sell_wallet) {
+        if (sender == self.order_jetton_sell_wallet) {
             nativeThrowUnless(order_already_opened, !self.open);
             nativeThrowUnless(access_denided, notify.sender == self.seller);
             nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_sell);
             self.open = true;
-        } else if (sender == self.my_jetton_buy_wallet) {
+        } else if (sender == self.order_jetton_buy_wallet) {
             nativeThrowUnless(order_not_opened, self.open);
             nativeThrowUnless(invalid_timeout, self.timeout > now());
             nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_buy);
@@ -89,7 +89,7 @@ contract Order {
             let buyer: Address = notify.sender;
 
             send(SendParameters{
-                to: self.my_jetton_buy_wallet,
+                to: self.order_jetton_buy_wallet,
                 value: jetton_transfer_fee,
                 bounce: true,
                 mode: SendIgnoreErrors,
@@ -105,7 +105,7 @@ contract Order {
             });
 
             send(SendParameters{
-                to: self.my_jetton_sell_wallet,
+                to: self.order_jetton_sell_wallet,
                 value: jetton_transfer_fee,
                 bounce: true,
                 mode: SendIgnoreErrors,
@@ -131,7 +131,7 @@ contract Order {
         nativeThrowUnless(access_denided, context().sender == self.seller);
 
         send(SendParameters{
-            to: self.my_jetton_sell_wallet,
+            to: self.order_jetton_sell_wallet,
             value: jetton_transfer_fee,
             bounce: true,
             mode: SendIgnoreErrors,
@@ -153,8 +153,8 @@ contract Order {
         return State {
             seller: self.seller,
             request: Request {
-            my_jetton_sell_wallet: self.my_jetton_sell_wallet,
-            my_jetton_buy_wallet: self.my_jetton_buy_wallet,
+            order_jetton_sell_wallet: self.order_jetton_sell_wallet,
+            order_jetton_buy_wallet: self.order_jetton_buy_wallet,
             jetton_sell_master: self.jetton_sell_master,
             jetton_buy_master: self.jetton_buy_master,
             amount_sell: self.amount_sell,
