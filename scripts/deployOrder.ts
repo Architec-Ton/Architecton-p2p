@@ -39,7 +39,10 @@ export async function run(provider: NetworkProvider) {
         }
     );
 
-    await provider.waitForDeploy(order.address);
+    console.log(order.address)
+    while (!await provider.isContractDeployed(order.address)) {
+        console.log('wait for deploy')
+    }
 
     // const state = await order.getState()
     // console.log(state)
