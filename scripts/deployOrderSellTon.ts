@@ -1,6 +1,6 @@
 import { Address, beginCell, toNano } from '@ton/core';
 import { OrderSellTon, Request, storeRequest } from '../wrappers/OrderSellTon';
-import { NetworkProvider } from '@ton/blueprint';
+import { NetworkProvider, sleep } from '@ton/blueprint';
 import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet } from './jetton-helpers';
 
@@ -36,6 +36,7 @@ export async function run(provider: NetworkProvider) {
     console.log(orderSellTon.address)
     while (!await provider.isContractDeployed(orderSellTon.address)) {
         console.log('wait for deploy')
+        await sleep(2)
     }
 
     // const state = await order.getState()
