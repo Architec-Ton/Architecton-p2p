@@ -1,6 +1,6 @@
 import { Address, beginCell, toNano } from '@ton/core';
 import { Order, Request, storeRequest } from '../wrappers/Order';
-import { NetworkProvider } from '@ton/blueprint';
+import { NetworkProvider, sleep } from '@ton/blueprint';
 import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet } from './jetton-helpers';
 
@@ -25,8 +25,8 @@ export async function run(provider: NetworkProvider) {
         order_jetton_buy_wallet: buyJettonWallet,
         jetton_sell_master: sellJettonMaster,
         jetton_buy_master: buyJettonMaster,
-        amount_sell: BigInt(10 * 10 ** sellDecimals),
-        amount_buy: BigInt(5 * 10 ** buyDecimals),
+        amount_sell: BigInt(5 * 10 ** sellDecimals),
+        amount_buy: BigInt(600 * 10 ** buyDecimals),
         timeout: BigInt(Math.floor(Date.now() / 1000) + timeout)
     };
 
@@ -42,6 +42,7 @@ export async function run(provider: NetworkProvider) {
     console.log(order.address)
     while (!await provider.isContractDeployed(order.address)) {
         console.log('wait for deploy')
+        await sleep(2)
     }
 
     // const state = await order.getState()
