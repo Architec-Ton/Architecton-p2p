@@ -8,9 +8,9 @@ export async function run(provider: NetworkProvider) {
     const feeWallet = Address.parse(process.env.FEE_WALLET!)
     const buyJettonMaster = Address.parse(masters.get('ARC')!!);
 
-    const order = provider.open(await OrderSellTon.fromInit(provider.sender().address!, feeWallet, BigInt(Date.now())));
+    const orderSellTon = provider.open(await OrderSellTon.fromInit(provider.sender().address!, feeWallet, BigInt(Date.now())));
 
-    const buyJettonWallet = await getJettonWallet(buyJettonMaster, order.address);
+    const buyJettonWallet = await getJettonWallet(buyJettonMaster, orderSellTon.address);
 
     const timeout = 60 * 60 * 24 * 100;
 
@@ -26,15 +26,17 @@ export async function run(provider: NetworkProvider) {
     };
 
     await provider.sender().send({
-            value: toNano(0.02),
-            to: order.address,
-            bounce: false,
-            init: order.init,
+            value: toNano(0.05 + 5),
+            to: orderSellTon.address,
+            init: orderSellTon.init,
             body: beginCell().store(storeRequest(request)).endCell()
         }
     );
 
-    await provider.waitForDeploy(order.address);
+    console.log(orderSellTon.address)
+    while (!await provider.isContractDeployed(orderSellTon.address)) {
+        console.log('wait for deploy')
+    }
 
     // const state = await order.getState()
     // console.log(state)
