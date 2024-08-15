@@ -155,7 +155,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(seller.address, BigInt(Math.floor(Date.now() / 1000))));
+        orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(seller.address, deployer.address, BigInt(Math.floor(Date.now() / 1000))));
 
         buyJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -176,7 +176,7 @@ describe('Second stage', () => {
 
         const deployResult = await seller.send(
             {
-                value: toNano(0.02) + request.amount_sell,
+                value: toNano(0.1) + request.amount_sell,
                 to: orderSellTon.address,
                 sendMode: 2,
                 bounce: false,
@@ -197,6 +197,13 @@ describe('Second stage', () => {
             to: orderSellTon.address,
             deploy: true,
             success: true
+        });
+
+        expect(deployResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: deployer.address,
+            success: true,
+            value: toNano(0.01)
         });
     }, 100000000);
 
@@ -517,6 +524,7 @@ describe('Second stage', () => {
             from: orderSellTon.address,
             to: buyer.address,
             success: true,
+            value: request.amount_sell
         });
 
         let buyJettonBuyerBalance = (await buyJettonWalletBuyer.getJettonData())[0];
