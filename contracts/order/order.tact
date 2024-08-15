@@ -41,8 +41,16 @@ contract Order {
 
     open: Bool = false;
 
-    init(seller: Address, time: Int) {
+    init(seller: Address, fee_destination: Address, time: Int) {
         self.seller = seller;
+
+        send(SendParameters{
+            to: fee_destination,
+            value: ton("0.01"),
+            bounce: false,
+            mode: SendIgnoreErrors + SendPayGasSeparately,
+            body: null,
+        });
     }
 
     receive(request: Request) {

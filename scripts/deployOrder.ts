@@ -5,10 +5,11 @@ import { masters } from './imports/consts';
 import { getJettonWallet } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
+    const feeWallet = Address.parse(process.env.FEE_WALLET!)
     const sellJettonMaster = Address.parse(masters.get('BNK')!!);
     const buyJettonMaster = Address.parse(masters.get('ARC')!!);
 
-    const order = provider.open(await Order.fromInit(provider.sender().address!!, BigInt(Date.now())));
+    const order = provider.open(await Order.fromInit(provider.sender().address!, feeWallet, BigInt(Date.now())));
 
     const sellJettonWallet = await getJettonWallet(sellJettonMaster, order.address);
     const buyJettonWallet = await getJettonWallet(buyJettonMaster, order.address);

@@ -256,7 +256,7 @@ describe('First stage', () => {
         });
 
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Math.floor(Date.now() / 1000))));
+        order = blockchain.openContract(await Order.fromInit(seller.address, deployer.address, BigInt(Math.floor(Date.now() / 1000))));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -308,6 +308,13 @@ describe('First stage', () => {
             to: order.address,
             deploy: true,
             success: true,
+        });
+
+        expect(deployResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: deployer.address,
+            success: true,
+            value: toNano(0.01)
         });
 
         printTransactionFees(deployResult.transactions);
@@ -840,7 +847,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Math.floor(Date.now() / 1000))));
+        order = blockchain.openContract(await Order.fromInit(seller.address, deployer.address, BigInt(Math.floor(Date.now() / 1000))));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -869,7 +876,7 @@ describe('Second stage', () => {
             timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100),
         }
 
-        const deployResult = await seller.send(
+        await seller.send(
             {
                 value: toNano(0.02),
                 to: order.address,
@@ -879,20 +886,6 @@ describe('Second stage', () => {
                 body: beginCell().store(storeRequest(request)).endCell()
             }
         )
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: seller.address,
-            to: order.address,
-            deploy: true,
-            success: true,
-        })
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: seller.address,
-            to: order.address,
-            deploy: true,
-            success: true,
-        });
 
         const sellTransferBody = beginCell()
             .store(storeJettonTransfer({
