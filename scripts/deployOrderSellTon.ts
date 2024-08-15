@@ -2,7 +2,7 @@ import { Address, beginCell, toNano } from '@ton/core';
 import { OrderSellTon, Request, storeRequest } from '../wrappers/OrderSellTon';
 import { NetworkProvider } from '@ton/blueprint';
 import { masters } from './imports/consts';
-import { getJettonWallet } from './jetton-helpers';
+import { getJettonDecimals, getJettonWallet } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
     const feeWallet = Address.parse(process.env.FEE_WALLET!)
@@ -14,12 +14,14 @@ export async function run(provider: NetworkProvider) {
 
     const timeout = 60 * 60 * 24 * 100;
 
+    const buyDecimals = await getJettonDecimals(buyJettonMaster)
+
     const request: Request = {
         $$type: 'Request',
         order_jetton_buy_wallet: buyJettonWallet,
         jetton_buy_master: buyJettonMaster,
-        amount_sell: 10n,
-        amount_buy: 5n,
+        amount_sell: toNano(10n),
+        amount_buy: BigInt(5 * 10 ** buyDecimals),
         timeout: BigInt(Math.floor(Date.now() / 1000) + timeout)
     };
 
