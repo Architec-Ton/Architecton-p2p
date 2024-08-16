@@ -81,9 +81,8 @@ contract OrderSellTon {
 
     receive(notify: JettonTransferNotification) {
         nativeThrowUnless(order_not_opened, self.open);
-        let sender: Address = context().sender;
 
-        if (sender == self.order_jetton_buy_wallet) {
+        if (context().sender == self.order_jetton_buy_wallet) {
             nativeThrowUnless(invalid_timeout, self.timeout > now());
             nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_buy);
 
