@@ -6,12 +6,7 @@ import { Minter } from '../wrappers/jetton-minter';
 
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
-import {
-    OrderSellTon,
-    Request,
-    storeJettonTransferNotification,
-    storeRequest
-} from '../build/OrderSellTon/tact_OrderSellTon';
+import { OrderSellTon, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/OrderSellTon';
 
 async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
@@ -48,8 +43,8 @@ describe('Second stage', () => {
     let request: Request;
 
     beforeEach(async () => {
-        buyWalletCode = await compile('jetton-wallet')
-        buyMinterCode = await compile('jetton-minter')
+        buyWalletCode = await compile('jetton-wallet');
+        buyMinterCode = await compile('jetton-minter');
 
         blockchain = await Blockchain.create();
         deployer = await blockchain.treasury('deployer');
@@ -70,11 +65,11 @@ describe('Second stage', () => {
             )
         );
 
-        buyJettonMaster = buyMinter.address
+        buyJettonMaster = buyMinter.address;
 
         buyJettonWalletDeployer = blockchain.openContract(
             Wallet.createFromConfig(
-                {owner_address: deployer.address, jetton_master_address: buyJettonMaster},
+                { owner_address: deployer.address, jetton_master_address: buyJettonMaster },
                 buyWalletCode
             )
         );
@@ -117,13 +112,13 @@ describe('Second stage', () => {
             from: deployer.address,
             to: buyMinter.address,
             deploy: true,
-            success: true,
+            success: true
         });
 
         expect(buyMinterDeployResult.transactions).toHaveTransaction({
             to: buyJettonWalletDeployer.address,
             deploy: true,
-            success: true,
+            success: true
         });
 
         const deployerBuyTransferBody = beginCell()
@@ -135,22 +130,22 @@ describe('Second stage', () => {
                 response_destination: buyer.address,
                 custom_payload: beginCell().endCell(),
                 forward_ton_amount: 0n,
-                forward_payload: beginCell().endCell().asSlice(),
+                forward_payload: beginCell().endCell().asSlice()
             }))
-            .endCell()
+            .endCell();
 
         const deployerBuyJettonTransferResult = await deployer.send({
             value: toNano(1),
             to: buyJettonWalletDeployer.address,
             sendMode: 2,
             body: deployerBuyTransferBody
-        })
+        });
 
         expect(deployerBuyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletDeployer.address,
             to: buyJettonWalletBuyer.address,
             deploy: true,
-            success: true,
+            success: true
         });
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
@@ -268,7 +263,7 @@ describe('Second stage', () => {
         expect(cancelTransaction.transactions).toHaveTransaction({
             from: orderSellTon.address,
             to: seller.address,
-            success: true,
+            success: true
         });
     }, 100000000);
 

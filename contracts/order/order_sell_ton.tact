@@ -81,40 +81,36 @@ contract OrderSellTon {
 
     receive(notify: JettonTransferNotification) {
         nativeThrowUnless(order_not_opened, self.open);
+        nativeThrowUnless(invalid_address, context().sender == self.order_jetton_buy_wallet);
+        nativeThrowUnless(invalid_timeout, self.timeout > now());
+        nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_buy);
 
-        if (context().sender == self.order_jetton_buy_wallet) {
-            nativeThrowUnless(invalid_timeout, self.timeout > now());
-            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_buy);
+        let buyer: Address = notify.sender;
 
-            let buyer: Address = notify.sender;
+        send(SendParameters{
+            to: self.order_jetton_buy_wallet,
+            value: jetton_transfer_fee,
+            bounce: true,
+            mode: SendIgnoreErrors,
+            body: JettonTransfer {
+                query_id: 0,
+                amount: self.amount_buy,
+                destination: self.seller,
+                response_destination: self.seller,
+                custom_payload: null,
+                forward_payload: null,
+                forward_ton_amount: 0
+            }.toCell()
+        });
 
-            send(SendParameters{
-                to: self.order_jetton_buy_wallet,
-                value: jetton_transfer_fee,
-                bounce: true,
-                mode: SendIgnoreErrors,
-                body: JettonTransfer {
-                    query_id: 0,
-                    amount: self.amount_buy,
-                    destination: self.seller,
-                    response_destination: self.seller,
-                    custom_payload: null,
-                    forward_payload: null,
-                    forward_ton_amount: 0
-                }.toCell()
-            });
+        send(SendParameters{
+            to: buyer,
+            value: self.amount_sell,
+            bounce: true,
+            mode: SendIgnoreErrors + SendPayGasSeparately,
+        });
 
-            send(SendParameters{
-                to: buyer,
-                value: self.amount_sell,
-                bounce: true,
-                mode: SendIgnoreErrors + SendPayGasSeparately,
-            });
-
-            self.withdraw()
-        } else {
-            throw(invalid_address);
-        }
+        self.withdraw()
     }
 
     receive("cancel") {
