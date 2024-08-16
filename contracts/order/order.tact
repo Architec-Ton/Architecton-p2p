@@ -87,7 +87,7 @@ contract Order {
     }
 
     receive(notify: JettonTransferNotification) {
-        nativeThrowUnless(order_not_opened, self.filled);
+        nativeThrowUnless(order_not_filled, self.filled);
         let sender: Address = context().sender;
 
         if (sender == self.order_jetton_sell_wallet) {
