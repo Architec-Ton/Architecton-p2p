@@ -25,6 +25,8 @@ const invalid_jetton_amount: Int = 39;
 const order_not_opened: Int = 40;
 const order_already_opened: Int = 41;
 const invalid_timeout: Int = 42;
+const order_already_filled: Int = 43;
+const order_not_filled: Int = 44;
 
 contract Order {
     seller: Address;
@@ -40,6 +42,7 @@ contract Order {
     timeout: Int = 0;
 
     open: Bool = false;
+    filled: Bool = false;
 
     init(seller: Address, fee_destination: Address, time: Int) {
         self.seller = seller;
@@ -55,7 +58,7 @@ contract Order {
 
     receive(request: Request) {
         nativeThrowUnless(access_denided, context().sender == self.seller);
-        nativeThrowUnless(order_already_opened, !self.open);
+        nativeThrowUnless(order_already_filled, !self.filled);
 
         self.order_jetton_sell_wallet = request.order_jetton_sell_wallet;
         self.order_jetton_buy_wallet = request.order_jetton_buy_wallet;
@@ -67,6 +70,8 @@ contract Order {
         self.amount_buy = request.amount_buy;
 
         self.timeout = request.timeout;
+
+        self.filled = true;
     }
 
     fun withdraw() {
@@ -82,6 +87,7 @@ contract Order {
     }
 
     receive(notify: JettonTransferNotification) {
+        nativeThrowUnless(order_not_opened, self.filled);
         let sender: Address = context().sender;
 
         if (sender == self.order_jetton_sell_wallet) {
