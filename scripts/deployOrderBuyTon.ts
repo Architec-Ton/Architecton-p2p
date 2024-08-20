@@ -8,7 +8,7 @@ export async function run(provider: NetworkProvider) {
     const feeWallet = Address.parse(process.env.FEE_WALLET!)
     const sellJettonMaster = Address.parse(masters.get('BNK')!!);
 
-    const order = provider.open(await OrderBuyTon.fromInit(provider.sender().address!, feeWallet, BigInt(Date.now())));
+    const order = provider.open(await OrderBuyTon.fromInit(provider.sender().address!, feeWallet, toNano(0.01), BigInt(Date.now())));
 
     const sellJettonWallet = await getJettonWallet(sellJettonMaster, order.address);
 
