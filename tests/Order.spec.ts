@@ -256,7 +256,7 @@ describe('First stage', () => {
         });
 
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, deployer.address, BigInt(Math.floor(Date.now() / 1000))));
+        order = blockchain.openContract(await Order.fromInit(seller.address, deployer.address, toNano(0.01), BigInt(Math.floor(Date.now() / 1000))));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -847,7 +847,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, deployer.address, BigInt(Math.floor(Date.now() / 1000))));
+        order = blockchain.openContract(await Order.fromInit(seller.address, deployer.address, toNano(0.01), BigInt(Math.floor(Date.now() / 1000))));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
