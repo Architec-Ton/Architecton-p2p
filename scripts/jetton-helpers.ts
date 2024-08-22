@@ -78,7 +78,7 @@ export function storeJettonTransfer(src: JettonTransfer) {
         if (src.custom_payload !== null && src.custom_payload !== undefined) { b_0.storeBit(true).storeRef(src.custom_payload); } else { b_0.storeBit(false); }
         b_0.storeCoins(src.forward_ton_amount);
         b_0.storeUint(0, 1);
-        // b_0.storeBuilder(src.forward_payload.asBuilder());
+        b_0.storeBuilder(src.forward_payload.asBuilder());
     };
 }
 

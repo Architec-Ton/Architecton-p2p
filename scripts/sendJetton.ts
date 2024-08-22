@@ -1,18 +1,16 @@
 import { Address, beginCell, toNano } from '@ton/core';
-import { Order } from '../wrappers/Order';
 import { NetworkProvider } from '@ton/blueprint';
 import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet, storeJettonTransfer } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
-    const orderAddress = Address.parse('kQCUdgpg81PkXM7VfiZyKAMipryq16zsGQt7Ej2jw9N97KaY')
+    const orderAddress = Address.parse('kQDR6PQPL6Fml-PuJypKrP-adIqmfTrdjruP0ZZEYd_1adFa')
     if (!await provider.isContractDeployed(orderAddress)) {
         console.log(`Order with address ${orderAddress.toString()} doesn't deployed`)
         return
     }
 
-    const order = provider.open(Order.fromAddress(orderAddress))
-    const jettonMaster = Address.parse(masters.get('BNK')!!);
+    const jettonMaster = Address.parse(masters.get('ARC')!!);
 
     const decimals = await getJettonDecimals(jettonMaster)
     const jettonWallet = await getJettonWallet(jettonMaster, provider.sender().address!);
@@ -21,22 +19,19 @@ export async function run(provider: NetworkProvider) {
         .store(storeJettonTransfer({
             $$type: 'JettonTransfer',
             query_id: 0n,
-            amount: 5n * BigInt(10 ** decimals),
-            destination: order.address,
-            response_destination: order.address,
+            amount: BigInt(10 * 10 ** decimals),
+            destination: orderAddress,
+            response_destination: orderAddress,
             custom_payload: beginCell().endCell(),
-            forward_ton_amount: toNano(0.1),
+            forward_ton_amount: toNano(0.08),
             forward_payload: beginCell().endCell().asSlice(),
         }))
         .endCell()
 
     await provider.sender().send({
-            value: toNano(0.2),
+            value: toNano(0.15),
             to: jettonWallet,
             body: transferBody,
         }
     );
-
-    // const state = await order.getState()
-    // console.log(state)
 }
