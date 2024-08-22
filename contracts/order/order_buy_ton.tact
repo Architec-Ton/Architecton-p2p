@@ -1,5 +1,10 @@
 import "./JettonMessages";
 
+message InitData {
+    seller: Address;
+    time: Int as uint64;
+}
+
 message Request {
     order_jetton_sell_wallet: Address;
     jetton_sell_master: Address;
@@ -29,6 +34,7 @@ const order_not_filled: Int = 44;
 
 contract OrderBuyTon {
     seller: Address;
+    router: Address;
 
     order_jetton_sell_wallet: Address = newAddress(0,0);
     jetton_sell_master: Address = newAddress(0,0);
@@ -41,21 +47,14 @@ contract OrderBuyTon {
     open: Bool = false;
     filled: Bool = false;
 
-    init(seller: Address, fee_destination: Address, fee_value: Int, time: Int) {
-        self.seller = seller;
-
-        send(SendParameters{
-            to: fee_destination,
-            value: fee_value,
-            bounce: false,
-            mode: SendIgnoreErrors + SendPayGasSeparately,
-            body: null,
-        });
+    init(initData: InitData) {
+        self.seller = initData.seller;
+        self.router = context().sender;
     }
 
     receive(request: Request) {
         let ctx = context();
-        nativeThrowUnless(access_denided, ctx.sender == self.seller);
+        nativeThrowUnless(access_denided, ctx.sender == self.router);
         nativeThrowUnless(order_already_filled, !self.filled);
 
         self.order_jetton_sell_wallet = request.order_jetton_sell_wallet;
@@ -84,7 +83,7 @@ contract OrderBuyTon {
     receive(notify: JettonTransferNotification) {
         nativeThrowUnless(order_not_filled, self.filled);
         nativeThrowUnless(order_already_opened, !self.open);
-        nativeThrowUnless(access_denided, notify.sender == self.seller);
+        nativeThrowUnless(access_denided, notify.sender == self.router);
         nativeThrowUnless(invalid_address, context().sender == self.order_jetton_sell_wallet);
         nativeThrowUnless(invalid_timeout, self.timeout > now());
         nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_sell);
@@ -98,13 +97,14 @@ contract OrderBuyTon {
         nativeThrowUnless(not_enough_ton, ctx.value >= self.amount_buy);
 
         let buyer: Address = ctx.sender;
-
+        dump("1");
         send(SendParameters{
             to: self.seller,
             value: self.amount_buy,
             bounce: true,
             mode: SendIgnoreErrors + SendPayGasSeparately,
         });
+        dump(myBalance());
 
         send(SendParameters{
             to: self.order_jetton_sell_wallet,
@@ -121,6 +121,7 @@ contract OrderBuyTon {
                 forward_ton_amount: 0
             }.toCell()
         });
+        dump("3");
 
         self.withdraw()
     }
