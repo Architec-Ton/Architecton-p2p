@@ -1,5 +1,10 @@
 import "./JettonMessages";
 
+message InitData {
+    seller: Address;
+    time: Int as uint64;
+}
+
 message Request {
     order_jetton_buy_wallet: Address;
     jetton_buy_master: Address;
@@ -27,6 +32,7 @@ const invalid_timeout: Int = 42;
 
 contract OrderSellTon {
     seller: Address;
+    router: Address;
 
     order_jetton_buy_wallet: Address = newAddress(0,0);
     jetton_buy_master: Address = newAddress(0,0);
@@ -38,23 +44,16 @@ contract OrderSellTon {
 
     open: Bool = false;
 
-    init(seller: Address, fee_destination: Address, fee_value: Int, time: Int) {
-        self.seller = seller;
-
-        send(SendParameters{
-            to: fee_destination,
-            value: fee_value,
-            bounce: false,
-            mode: SendIgnoreErrors + SendPayGasSeparately,
-            body: null,
-        });
+    init(initData: InitData) {
+        self.seller = initData.seller;
+        self.router = context().sender;
     }
 
     receive(request: Request) {
         let ctx = context();
-        nativeThrowUnless(access_denided, ctx.sender == self.seller);
+        nativeThrowUnless(access_denided, ctx.sender == self.router);
         nativeThrowUnless(order_already_opened, !self.open);
-        nativeThrowUnless(not_enough_ton, ctx.value >= self.amount_sell);
+        nativeThrowUnless(not_enough_ton, ctx.value >= request.amount_sell);
 
         self.order_jetton_buy_wallet = request.order_jetton_buy_wallet;
         self.jetton_buy_master = request.jetton_buy_master;
