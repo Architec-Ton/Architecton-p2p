@@ -697,7 +697,7 @@ describe('Router', () => {
             seller: seller.address,
             time: BigInt(Date.now())
         };
-        const orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(orderInit));
+        const orderSellTon = blockchain.openContract(OrderSellTon.fromAddress(await routerSellTon.getCalculateOrder(orderInit)));
 
         const buyJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({

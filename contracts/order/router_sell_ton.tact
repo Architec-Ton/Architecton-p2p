@@ -1,22 +1,12 @@
 import "./order_sell_ton";
-
-const deploy_fee: Int = ton("0.01");
-const invalid_seller: Int = 45;
+import "./router_base";
 
 message TonTransferNotification {
     request: Request;
     initData: InitData;
 }
 
-message NewOwner {
-    new_owner: Address;
-}
-
-message NewFee {
-    new_fee: Int;
-}
-
-contract RouterSellTon {
+contract RouterSellTon with RouterBase {
     owner: Address;
     fee: Int;
 
@@ -25,22 +15,9 @@ contract RouterSellTon {
         self.fee = fee;
     }
 
-    receive() {}
-
-    receive(msg: NewOwner) {
-        nativeThrowUnless(access_denided, self.owner == context().sender);
-        self.owner = msg.new_owner;
-    }
-
-    receive(msg: NewFee) {
-        nativeThrowUnless(access_denided, self.owner == context().sender);
-        self.fee = msg.new_fee;
-    }
-
     receive (notify: TonTransferNotification){
         let seller = context().sender;
         let request = notify.request;
-        dump(request.amount_sell);
         let initData = notify.initData;
 
         nativeThrowUnless(invalid_seller, seller == initData.seller);
@@ -67,11 +44,8 @@ contract RouterSellTon {
         });
     }
 
-    get fun owner(): Address {
-        return self.owner
-    }
-
-    get fun fee(): Int {
-        return self.fee
+    override get fun calculate_order(initData: InitData): Address {
+        let orderInit = initOf OrderSellTon(initData);
+        return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }

@@ -1,35 +1,13 @@
 import "./order_buy_ton";
+import "./router_base";
 
-const deploy_fee: Int = ton("0.01");
-const invalid_seller: Int = 45;
-
-message NewOwner {
-    new_owner: Address;
-}
-
-message NewFee {
-    new_fee: Int;
-}
-
-contract RouterBuyTon {
+contract RouterBuyTon with RouterBase {
     owner: Address;
     fee: Int;
 
     init(owner: Address, fee: Int, time: Int) {
         self.owner = owner;
         self.fee = fee;
-    }
-
-    receive() {}
-
-    receive(msg: NewOwner) {
-        nativeThrowUnless(access_denided, self.owner == context().sender);
-        self.owner = msg.new_owner;
-    }
-
-    receive(msg: NewFee) {
-        nativeThrowUnless(access_denided, self.owner == context().sender);
-        self.fee = msg.new_fee;
     }
 
     receive(notify: JettonTransferNotification) {
@@ -105,11 +83,8 @@ contract RouterBuyTon {
         });
     }
 
-    get fun owner(): Address {
-        return self.owner
-    }
-
-    get fun fee(): Int {
-        return self.fee
+    override get fun calculate_order(initData: InitData): Address {
+        let orderInit = initOf OrderBuyTon(initData);
+        return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }

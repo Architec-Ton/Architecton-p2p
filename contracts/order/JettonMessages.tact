@@ -14,3 +14,21 @@ message(0x0f8a7ea5) JettonTransfer {
     forward_ton_amount: Int as coins;       // the amount of nanotons to be sent to the destination address.
     forward_payload: Slice?;    // optional custom data that should be sent to the destination address.
 }
+
+inline fun basicJettonTransfer(jetton_wallet: Address, destination: Address, amount: Int, forward_ton_amount: Int) {
+    send(SendParameters{
+        to: jetton_wallet,
+        value: jetton_transfer_fee,
+        bounce: true,
+        mode: SendIgnoreErrors,
+        body: JettonTransfer {
+            query_id: 0,
+            amount: amount,
+            destination: destination,
+            response_destination: destination,
+            custom_payload: null,
+            forward_payload: null,
+            forward_ton_amount: forward_ton_amount
+        }.toCell()
+    });
+}

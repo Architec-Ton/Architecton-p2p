@@ -1,9 +1,4 @@
-import "./JettonMessages";
-
-message InitData {
-    seller: Address;
-    time: Int as uint64;
-}
+import "./order_base";
 
 message Request {
     order_jetton_sell_wallet: Address;
@@ -16,36 +11,20 @@ message Request {
     timeout: Int as uint64;
 }
 
-struct State {
-    seller: Address;
-    request: Request;
-    open: Bool;
-}
-
-const jetton_transfer_fee: Int = ton("0.04"); // ~ 0.04 TON, medium fee for any amount of Jetton is 0.037 TON - docs
-const invalid_address: Int = 136;
-const access_denided: Int = 132;
-const order_closed: Int = 133;
-const invalid_jetton_amount: Int = 39;
-const order_not_opened: Int = 40;
-const order_already_opened: Int = 41;
-const invalid_timeout: Int = 42;
-const order_already_filled: Int = 43;
-const order_not_filled: Int = 44;
-
-contract Order {
+contract Order with OrderBase {
     seller: Address;
     router: Address;
 
-    order_jetton_buy_wallet: Address = newAddress(0,0);
-    order_jetton_sell_wallet: Address = newAddress(0,0);
-    jetton_sell_master: Address = newAddress(0,0);
-    jetton_buy_master: Address = newAddress(0,0);
+    request: Request = Request {
+        order_jetton_sell_wallet: newAddress(0,0),
+        order_jetton_buy_wallet: newAddress(0,0),
+        jetton_sell_master: newAddress(0,0),
+        jetton_buy_master: newAddress(0,0),
+        amount_sell: 0,
+        amount_buy: 0,
 
-    amount_sell: Int = 0;
-    amount_buy: Int = 0;
-
-    timeout: Int = 0;
+        timeout: 0,
+    };
 
     open: Bool = false;
     filled: Bool = false;
@@ -59,79 +38,29 @@ contract Order {
         nativeThrowUnless(access_denided, context().sender == self.router);
         nativeThrowUnless(order_already_filled, !self.filled);
 
-        self.order_jetton_sell_wallet = request.order_jetton_sell_wallet;
-        self.order_jetton_buy_wallet = request.order_jetton_buy_wallet;
-
-        self.jetton_sell_master = request.jetton_sell_master;
-        self.jetton_buy_master = request.jetton_buy_master;
-
-        self.amount_sell = request.amount_sell;
-        self.amount_buy = request.amount_buy;
-
-        self.timeout = request.timeout;
+        self.request = request;
 
         self.filled = true;
-    }
-
-    fun withdraw() {
-        self.open = false;
-
-        send(SendParameters{
-            to: self.seller,
-            value: 0,
-            bounce: false,
-            mode: SendRemainingBalance + SendDestroyIfZero,
-            body: null,
-        });
     }
 
     receive(notify: JettonTransferNotification) {
         nativeThrowUnless(order_not_filled, self.filled);
         let sender: Address = context().sender;
 
-        if (sender == self.order_jetton_sell_wallet) {
+        if (sender == self.request.order_jetton_sell_wallet) {
             nativeThrowUnless(order_already_opened, !self.open);
             nativeThrowUnless(access_denided, notify.sender == self.router);
-            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_sell);
+            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_sell);
+
             self.open = true;
-        } else if (sender == self.order_jetton_buy_wallet) {
+        } else if (sender == self.request.order_jetton_buy_wallet) {
             nativeThrowUnless(order_not_opened, self.open);
-            nativeThrowUnless(invalid_timeout, self.timeout > now());
-            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.amount_buy);
+            nativeThrowUnless(invalid_timeout, self.request.timeout > now());
+            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
 
-            let buyer: Address = notify.sender;
+            basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0);
 
-            send(SendParameters{
-                to: self.order_jetton_buy_wallet,
-                value: jetton_transfer_fee,
-                bounce: true,
-                mode: SendIgnoreErrors,
-                body: JettonTransfer {
-                    query_id: 0,
-                    amount: self.amount_buy,
-                    destination: self.seller,
-                    response_destination: self.seller,
-                    custom_payload: null,
-                    forward_payload: null,
-                    forward_ton_amount: 0
-                }.toCell()
-            });
-
-            send(SendParameters{
-                to: self.order_jetton_sell_wallet,
-                value: jetton_transfer_fee,
-                bounce: true,
-                mode: SendIgnoreErrors,
-                body: JettonTransfer {
-                    query_id: 0,
-                    amount: self.amount_sell,
-                    destination: buyer,
-                    response_destination: buyer,
-                    custom_payload: null,
-                    forward_payload: null,
-                    forward_ton_amount: 0
-                }.toCell()
-            });
+            basicJettonTransfer(self.request.order_jetton_sell_wallet, notify.sender, self.request.amount_sell, 0);
 
             self.withdraw()
         } else {
@@ -143,39 +72,8 @@ contract Order {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
 
-        send(SendParameters{
-            to: self.order_jetton_sell_wallet,
-            value: jetton_transfer_fee,
-            bounce: true,
-            mode: SendIgnoreErrors,
-            body: JettonTransfer {
-                query_id: 0,
-                amount: self.amount_sell,
-                destination: self.seller,
-                response_destination: self.seller,
-                custom_payload: null,
-                forward_payload: null,
-                forward_ton_amount: 0
-            }.toCell()
-        });
+        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0);
 
         self.withdraw()
-    }
-
-    get fun state(): State {
-        return State {
-            seller: self.seller,
-            request: Request {
-                order_jetton_sell_wallet: self.order_jetton_sell_wallet,
-                order_jetton_buy_wallet: self.order_jetton_buy_wallet,
-                jetton_sell_master: self.jetton_sell_master,
-                jetton_buy_master: self.jetton_buy_master,
-                amount_sell: self.amount_sell,
-                amount_buy: self.amount_buy,
-
-                timeout: self.timeout,
-            },
-            open: self.open,
-        };
     }
 }

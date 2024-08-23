@@ -1,0 +1,11 @@
+const invalid_address: Int = 136;
+const access_denided: Int = 132;
+const order_closed: Int = 133;
+const not_enough_ton: Int = 37;
+const invalid_jetton_amount: Int = 39;
+const order_not_opened: Int = 40;
+const order_already_opened: Int = 41;
+const invalid_timeout: Int = 42;
+const order_already_filled: Int = 43;
+const order_not_filled: Int = 44;
+const invalid_seller: Int = 45;
