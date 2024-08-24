@@ -12,7 +12,6 @@ export async function run(provider: NetworkProvider) {
     }
 
     const sellJettonMaster = Address.parse(masters.get('BNK')!!);
-    const buyJettonMaster = Address.parse(masters.get('ARC')!!);
 
     const orderInit: InitData = {
         $$type: 'InitData',
@@ -27,14 +26,13 @@ export async function run(provider: NetworkProvider) {
     const timeout = 60 * 60 * 24 * 100;
 
     const sellDecimals = await getJettonDecimals(sellJettonMaster)
-    const buyDecimals = await getJettonDecimals(buyJettonMaster)
 
     const request: Request = {
         $$type: 'Request',
         order_jetton_sell_wallet: sellJettonWallet,
         jetton_sell_master: sellJettonMaster,
         amount_sell: BigInt(2 * 10 ** sellDecimals),
-        amount_buy: BigInt(10 * 10 ** buyDecimals),
+        amount_buy: toNano(1),
         timeout: BigInt(Math.floor(Date.now() / 1000) + timeout)
     };
 

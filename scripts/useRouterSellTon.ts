@@ -37,7 +37,7 @@ export async function run(provider: NetworkProvider) {
 
     await provider.sender().send({
         value: toNano(0.1) + request.amount_sell,
-        to: orderSellTon.address,
+        to: routerAddress,
         body: beginCell()
             .store(storeTonTransferNotification({
                 $$type: 'TonTransferNotification',
