@@ -11,9 +11,9 @@ import { OrderSellTon, Request, storeJettonTransferNotification, storeRequest } 
 
 async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
-    expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.open).toEqual(open);
 
+    expect(currentState.request.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_buy_wallet.toString()).toEqual(request.order_jetton_buy_wallet.toString());
     expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString());
     expect(currentState.request.amount_buy).toEqual(request.amount_buy);
@@ -151,7 +151,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(seller.address, seller.address, BigInt(Date.now())));
+        orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(seller.address, BigInt(Date.now())));
 
         buyJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -163,6 +163,7 @@ describe('Second stage', () => {
 
         request = {
             $$type: 'Request',
+            seller: seller.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_buy_master: buyMinter.address,
             amount_sell: toNano(10n),
@@ -698,6 +699,7 @@ describe('Router', () => {
 
         const request: Request = {
             $$type: 'Request',
+            seller: seller.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_buy_master: buyMinter.address,
             amount_sell: toNano(10),

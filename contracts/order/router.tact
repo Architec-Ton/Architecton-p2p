@@ -21,7 +21,7 @@ contract Router with RouterBase {
             nativeThrow(not_enough_ton);
         }
 
-        let orderInit = initOf Order(seller, myAddress(), self.nonce);
+        let orderInit = initOf Order(myAddress(), self.nonce);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
         self.nonce += 1;
 
@@ -46,7 +46,7 @@ contract Router with RouterBase {
     override get fun calculate_order(seller: Address, nonce: Int): Address {
         nativeThrowUnless(invalid_nonce, nonce <= self.nonce);
 
-        let orderInit = initOf Order(seller, myAddress(), nonce);
+        let orderInit = initOf Order(myAddress(), nonce);
         return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }

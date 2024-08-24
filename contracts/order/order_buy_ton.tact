@@ -1,6 +1,7 @@
 import "./order_base";
 
 message Request {
+    seller: Address;
     order_jetton_sell_wallet: Address;
     jetton_sell_master: Address;
     amount_sell: Int as coins;
@@ -10,10 +11,10 @@ message Request {
 }
 
 contract OrderBuyTon with OrderBase {
-    seller: Address;
     router: Address;
 
     request: Request = Request {
+        seller: newAddress(0,0),
         order_jetton_sell_wallet: newAddress(0,0),
         jetton_sell_master: newAddress(0,0),
         amount_sell: 0,
@@ -25,10 +26,9 @@ contract OrderBuyTon with OrderBase {
     open: Bool = false;
     filled: Bool = false;
 
-    init(seller: Address, router: Address, nonce: Int) {
+    init(router: Address, nonce: Int) {
         nativeThrowUnless(invalid_router, context().sender == router);
 
-        self.seller = seller;
         self.router = router;
     }
 
@@ -59,7 +59,7 @@ contract OrderBuyTon with OrderBase {
 
         let buyer: Address = ctx.sender;
         send(SendParameters{
-            to: self.seller,
+            to: self.request.seller,
             value: self.request.amount_buy,
             bounce: true,
             mode: SendIgnoreErrors + SendPayGasSeparately,
@@ -72,9 +72,9 @@ contract OrderBuyTon with OrderBase {
 
     receive("cancel") {
         nativeThrowUnless(order_closed, self.open);
-        nativeThrowUnless(access_denided, context().sender == self.seller);
+        nativeThrowUnless(access_denided, context().sender == self.request.seller);
 
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0, SendIgnoreErrors);
+        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.request.seller, self.request.amount_sell, 0, SendIgnoreErrors);
 
         self.withdraw()
     }

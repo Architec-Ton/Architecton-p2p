@@ -18,7 +18,7 @@ contract RouterSellTon with RouterBase {
     receive (request: Request){
         let seller = context().sender;
 
-        let orderInit = initOf OrderSellTon(seller, myAddress(), self.nonce);
+        let orderInit = initOf OrderSellTon(myAddress(), self.nonce);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
         self.nonce += 1;
 
@@ -41,7 +41,7 @@ contract RouterSellTon with RouterBase {
     override get fun calculate_order(seller: Address, nonce: Int): Address {
         nativeThrowUnless(invalid_nonce, nonce <= self.nonce);
 
-        let orderInit = initOf OrderSellTon(seller, myAddress(), nonce);
+        let orderInit = initOf OrderSellTon(myAddress(), nonce);
         return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }

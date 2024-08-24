@@ -11,9 +11,9 @@ import { Router } from '../wrappers/Router';
 
 async function checkStage(order: SandboxContract<Order>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
-    expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.open).toEqual(open);
 
+    expect(currentState.request.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_sell_wallet.toString()).toEqual(request.order_jetton_sell_wallet.toString());
     expect(currentState.request.order_jetton_buy_wallet.toString()).toEqual(request.order_jetton_buy_wallet.toString());
     expect(currentState.request.jetton_sell_master.toString()).toEqual(request.jetton_sell_master.toString());
@@ -256,7 +256,7 @@ describe('First stage', () => {
             success: true
         });
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, seller.address, BigInt(Date.now())));
+        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Date.now())));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -276,6 +276,7 @@ describe('First stage', () => {
 
         request = {
             $$type: 'Request',
+            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
@@ -839,7 +840,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, seller.address, BigInt(Date.now())));
+        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Date.now())));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -859,6 +860,7 @@ describe('Second stage', () => {
 
         request = {
             $$type: 'Request',
+            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
@@ -1526,6 +1528,7 @@ describe('Router', () => {
 
         const request: Request = {
             $$type: 'Request',
+            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,

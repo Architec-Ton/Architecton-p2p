@@ -11,9 +11,9 @@ import { RouterBuyTon } from '../wrappers/RouterBuyTon';
 
 async function checkStage(orderBuyTon: SandboxContract<OrderBuyTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await orderBuyTon.getState()
-    expect(currentState.seller.toString()).toEqual(seller.address.toString())
     expect(currentState.open).toEqual(open)
 
+    expect(currentState.request.seller.toString()).toEqual(seller.address.toString())
     expect(currentState.request.order_jetton_sell_wallet.toString()).toEqual(request.order_jetton_sell_wallet.toString())
     expect(currentState.request.jetton_sell_master.toString()).toEqual(request.jetton_sell_master.toString())
     expect(currentState.request.amount_buy).toEqual(request.amount_buy)
@@ -149,7 +149,7 @@ describe('First stage', () => {
             success: true,
         });
 
-        orderBuyTon = blockchain.openContract(await OrderBuyTon.fromInit(seller.address, seller.address, BigInt(Date.now())));
+        orderBuyTon = blockchain.openContract(await OrderBuyTon.fromInit(seller.address, BigInt(Date.now())));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -161,6 +161,7 @@ describe('First stage', () => {
 
         request = {
             $$type: 'Request',
+            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
             amount_sell: 10n,
@@ -600,7 +601,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        orderBuyTon = blockchain.openContract(await OrderBuyTon.fromInit(seller.address, seller.address, BigInt(Date.now())));
+        orderBuyTon = blockchain.openContract(await OrderBuyTon.fromInit(seller.address, BigInt(Date.now())));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -612,6 +613,7 @@ describe('Second stage', () => {
 
         request = {
             $$type: 'Request',
+            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
             amount_sell: 10n,
@@ -968,6 +970,7 @@ describe('Router', () => {
 
         request = {
             $$type: 'Request',
+            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
             amount_sell: 10n,
