@@ -17,11 +17,10 @@ export async function run(provider: NetworkProvider) {
     const orderInit: InitData = {
         $$type: 'InitData',
         seller: provider.sender().address!,
-        time: BigInt(Date.now())
+        nonce: BigInt(Date.now())
     };
     const orderSellTon = await OrderSellTon.fromInit(orderInit)
     const buyJettonWallet = await getJettonWallet(buyJettonMaster, orderSellTon.address);
-
 
     const timeout = 60 * 60 * 24 * 100;
 

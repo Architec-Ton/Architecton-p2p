@@ -5,14 +5,13 @@ import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
-    const feeWallet = Address.parse(process.env.FEE_WALLET!)
     const buyJettonMaster = Address.parse(masters.get('ARC')!!);
 
     const orderInit: InitData = {
         $$type: 'InitData',
         seller: provider.sender().address!,
-        time: BigInt(Date.now())
-    };
+        nonce: BigInt(Date.now())
+    }
 
     const orderSellTon = provider.open(await OrderSellTon.fromInit(orderInit));
 

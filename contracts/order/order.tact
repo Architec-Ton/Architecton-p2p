@@ -1,7 +1,6 @@
 import "./order_base";
 
 message Request {
-    seller: Address;
     order_jetton_sell_wallet: Address;
     order_jetton_buy_wallet: Address;
     jetton_sell_master: Address;
@@ -13,10 +12,10 @@ message Request {
 }
 
 contract Order with OrderBase {
+    seller: Address;
     router: Address;
 
     request: Request = Request {
-        seller: newAddress(0,0),
         order_jetton_sell_wallet: newAddress(0,0),
         order_jetton_buy_wallet: newAddress(0,0),
         jetton_sell_master: newAddress(0,0),
@@ -30,10 +29,9 @@ contract Order with OrderBase {
     open: Bool = false;
     filled: Bool = false;
 
-    init(router: Address, nonce: Int) {
-        nativeThrowUnless(invalid_router, context().sender == router);
-
-        self.router = router;
+    init(initData: InitData) {
+        self.router = context().sender;
+        self.seller = initData.seller;
     }
 
     receive(request: Request) {
@@ -60,7 +58,7 @@ contract Order with OrderBase {
             nativeThrowUnless(invalid_timeout, self.request.timeout > now());
             nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
 
-            basicJettonTransfer(self.request.order_jetton_buy_wallet, self.request.seller, self.request.amount_buy, 0, SendIgnoreErrors);
+            basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
             basicJettonTransfer(self.request.order_jetton_sell_wallet, notify.sender, self.request.amount_sell, 0, SendIgnoreErrors);
 
             self.withdraw()
@@ -71,9 +69,9 @@ contract Order with OrderBase {
 
     receive("cancel") {
         nativeThrowUnless(order_closed, self.open);
-        nativeThrowUnless(access_denided, context().sender == self.request.seller);
+        nativeThrowUnless(access_denided, context().sender == self.seller);
 
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.request.seller, self.request.amount_sell, 0, SendIgnoreErrors);
+        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0, SendIgnoreErrors);
 
         self.withdraw()
     }

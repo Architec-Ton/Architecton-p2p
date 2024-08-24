@@ -1,19 +1,19 @@
 import { Blockchain, printTransactionFees, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, toNano } from '@ton/core';
-import { Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
+import { InitData, Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
 import { Minter } from '../wrappers/jetton-minter';
 
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
-import { Router } from '../wrappers/Router';
+import { Router, storeInitData } from '../wrappers/Router';
 
 async function checkStage(order: SandboxContract<Order>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
     expect(currentState.open).toEqual(open);
 
-    expect(currentState.request.seller.toString()).toEqual(seller.address.toString());
+    expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_sell_wallet.toString()).toEqual(request.order_jetton_sell_wallet.toString());
     expect(currentState.request.order_jetton_buy_wallet.toString()).toEqual(request.order_jetton_buy_wallet.toString());
     expect(currentState.request.jetton_sell_master.toString()).toEqual(request.jetton_sell_master.toString());
@@ -256,7 +256,13 @@ describe('First stage', () => {
             success: true
         });
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Date.now())));
+        const orderInit: InitData = {
+            $$type: 'InitData',
+            seller: seller.address,
+            nonce: BigInt(Date.now())
+        };
+
+        order = blockchain.openContract(await Order.fromInit(orderInit));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -276,7 +282,6 @@ describe('First stage', () => {
 
         request = {
             $$type: 'Request',
-            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
@@ -840,7 +845,13 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Date.now())));
+        const orderInit: InitData = {
+            $$type: 'InitData',
+            seller: seller.address,
+            nonce: BigInt(Date.now())
+        };
+
+        order = blockchain.openContract(await Order.fromInit(orderInit));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -860,7 +871,6 @@ describe('Second stage', () => {
 
         request = {
             $$type: 'Request',
-            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
@@ -1509,7 +1519,13 @@ describe('Router', () => {
             )
         );
 
-        const order = blockchain.openContract(Order.fromAddress(await router.getCalculateOrder(seller.address, await router.getNonce())));
+        const orderInit: InitData = {
+            $$type: 'InitData',
+            seller: seller.address,
+            nonce: BigInt(Date.now())
+        };
+
+        const order = blockchain.openContract(Order.fromAddress(await router.getCalculateOrder(orderInit)));
         const sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
                     owner_address: order.address, jetton_master_address: sellJettonMaster
@@ -1528,7 +1544,6 @@ describe('Router', () => {
 
         const request: Request = {
             $$type: 'Request',
-            seller: seller.address,
             order_jetton_sell_wallet: sellJettonWalletOrder.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_sell_master: sellMinter.address,
@@ -1541,6 +1556,9 @@ describe('Router', () => {
         const createOrderBody = beginCell()
             .storeRef(beginCell()
                 .store(storeRequest(request))
+                .endCell())
+            .storeRef(beginCell()
+                .store(storeInitData(orderInit))
                 .endCell())
             .endCell()
             .asSlice();

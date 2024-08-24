@@ -11,7 +11,7 @@ export async function run(provider: NetworkProvider) {
     const orderInit: InitData = {
         $$type: 'InitData',
         seller: provider.sender().address!,
-        time: BigInt(Date.now())
+        nonce: BigInt(Date.now())
     }
     const order = provider.open(await Order.fromInit(orderInit));
 

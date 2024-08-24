@@ -3,12 +3,17 @@ import { OrderBuyTon, Request, storeRequest } from '../wrappers/OrderBuyTon';
 import { NetworkProvider, sleep } from '@ton/blueprint';
 import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet } from './jetton-helpers';
+import { InitData } from '../build/Order/tact_Order';
 
 export async function run(provider: NetworkProvider) {
-    const feeWallet = Address.parse(process.env.FEE_WALLET!)
     const sellJettonMaster = Address.parse(masters.get('BNK')!!);
 
-    const order = provider.open(await OrderBuyTon.fromInit(provider.sender().address!, feeWallet, toNano(0.01), BigInt(Date.now())));
+    const orderInit: InitData = {
+        $$type: 'InitData',
+        seller: provider.sender().address!,
+        nonce: BigInt(Date.now())
+    }
+    const order = provider.open(await OrderBuyTon.fromInit(orderInit));
 
     const sellJettonWallet = await getJettonWallet(sellJettonMaster, order.address);
 

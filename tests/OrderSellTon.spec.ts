@@ -3,17 +3,18 @@ import { Address, beginCell, Cell, toNano } from '@ton/core';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
 import { Minter } from '../wrappers/jetton-minter';
-import { RouterSellTon } from '../wrappers/RouterSellTon';
+import { RouterSellTon, storeTonTransferNotification, TonTransferNotification } from '../wrappers/RouterSellTon';
 
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
 import { OrderSellTon, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/OrderSellTon';
+import { InitData } from '../build/Order/tact_Order';
 
 async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
     expect(currentState.open).toEqual(open);
 
-    expect(currentState.request.seller.toString()).toEqual(seller.address.toString());
+    expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_buy_wallet.toString()).toEqual(request.order_jetton_buy_wallet.toString());
     expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString());
     expect(currentState.request.amount_buy).toEqual(request.amount_buy);
@@ -151,7 +152,12 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(seller.address, BigInt(Date.now())));
+        const orderInit: InitData = {
+            $$type: 'InitData',
+            seller: seller.address,
+            nonce: BigInt(Date.now())
+        };
+        orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(orderInit));
 
         buyJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -163,7 +169,6 @@ describe('Second stage', () => {
 
         request = {
             $$type: 'Request',
-            seller: seller.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_buy_master: buyMinter.address,
             amount_sell: toNano(10n),
@@ -542,7 +547,7 @@ describe('Router', () => {
     let buyer: SandboxContract<TreasuryContract>;
     let orderSellTon: SandboxContract<OrderSellTon>;
 
-    let buyMinter: SandboxContract<Minter>
+    let buyMinter: SandboxContract<Minter>;
 
     let routerSellTon: SandboxContract<RouterSellTon>;
 
@@ -687,7 +692,12 @@ describe('Router', () => {
     }, 100000000);
 
     it('main flow', async () => {
-        const orderSellTon = blockchain.openContract(OrderSellTon.fromAddress(await routerSellTon.getCalculateOrder(seller.address, await routerSellTon.getNonce())));
+        const orderInit: InitData = {
+            $$type: 'InitData',
+            seller: seller.address,
+            nonce: BigInt(Date.now())
+        };
+        const orderSellTon = blockchain.openContract(OrderSellTon.fromAddress(await routerSellTon.getCalculateOrder(orderInit)));
 
         const buyJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -699,7 +709,6 @@ describe('Router', () => {
 
         const request: Request = {
             $$type: 'Request',
-            seller: seller.address,
             order_jetton_buy_wallet: buyJettonWalletOrder.address,
             jetton_buy_master: buyMinter.address,
             amount_sell: toNano(10),
@@ -707,13 +716,19 @@ describe('Router', () => {
             timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
+        const tonTransferBody: TonTransferNotification = {
+            $$type: 'TonTransferNotification',
+            request: request,
+            initData: orderInit
+        };
+
         const sellJettonTransferResult = await seller.send({
             value: toNano(0.1) + request.amount_sell,
             to: routerSellTon.address,
             sendMode: 2,
             body: beginCell()
-                .store(storeRequest(
-                    request
+                .store(storeTonTransferNotification(
+                    tonTransferBody
                 ))
                 .endCell()
         });

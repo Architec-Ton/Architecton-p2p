@@ -3,24 +3,23 @@ import "./router_base";
 
 message TonTransferNotification {
     request: Request;
+    initData: InitData;
 }
 
 contract RouterSellTon with RouterBase {
     owner: Address;
     fee: Int;
-    nonce: Int = 0;
 
     init(owner: Address, fee: Int, time: Int) {
         self.owner = owner;
         self.fee = fee;
     }
 
-    receive (request: Request){
+    receive (notify: TonTransferNotification) {
         let seller = context().sender;
 
-        let orderInit = initOf OrderSellTon(myAddress(), self.nonce);
+        let orderInit = initOf OrderSellTon(notify.initData);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
-        self.nonce += 1;
 
         send(SendParameters{
             to: self.owner,
@@ -32,16 +31,14 @@ contract RouterSellTon with RouterBase {
             to: orderAddress,
             value: 0,
             mode: SendIgnoreErrors | SendRemainingBalance,
-            body: request.toCell(),
+            body: notify.request.toCell(),
             code: orderInit.code,
             data: orderInit.data
         });
     }
 
-    override get fun calculate_order(seller: Address, nonce: Int): Address {
-        nativeThrowUnless(invalid_nonce, nonce <= self.nonce);
-
-        let orderInit = initOf OrderSellTon(myAddress(), nonce);
+    override get fun calculate_order(initData: InitData): Address {
+        let orderInit = initOf OrderSellTon(initData);
         return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }
