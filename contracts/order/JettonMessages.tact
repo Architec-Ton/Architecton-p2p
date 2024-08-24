@@ -15,12 +15,17 @@ message(0x0f8a7ea5) JettonTransfer {
     forward_payload: Slice?;    // optional custom data that should be sent to the destination address.
 }
 
-inline fun basicJettonTransfer(jetton_wallet: Address, destination: Address, amount: Int, forward_ton_amount: Int) {
+inline fun basicJettonTransfer(jetton_wallet: Address, destination: Address, amount: Int, forward_ton_amount: Int, mode: Int) {
+    let value = jetton_transfer_fee;
+    if (mode >= 64) {
+        value = 0;
+    }
+
     send(SendParameters{
         to: jetton_wallet,
-        value: jetton_transfer_fee,
+        value: value,
         bounce: true,
-        mode: SendIgnoreErrors,
+        mode: mode,
         body: JettonTransfer {
             query_id: 0,
             amount: amount,

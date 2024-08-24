@@ -9,3 +9,5 @@ const invalid_timeout: Int = 42;
 const order_already_filled: Int = 43;
 const order_not_filled: Int = 44;
 const invalid_seller: Int = 45;
+const invalid_nonce: Int = 46;
+const invalid_router: Int = 47;

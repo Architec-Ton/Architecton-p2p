@@ -11,6 +11,7 @@ message NewFee {
 trait RouterBase {
     owner: Address;
     fee: Int;
+    nonce: Int;
 
     receive() {}
 
@@ -32,5 +33,9 @@ trait RouterBase {
         return self.fee
     }
 
-    abstract get fun calculate_order(initData: InitData): Address;
+    get fun nonce(): Int {
+        return self.nonce
+    }
+
+    abstract get fun calculate_order(seller: Address, nonce: Int): Address;
 }

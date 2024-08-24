@@ -3,40 +3,34 @@ import "./router_base";
 
 message TonTransferNotification {
     request: Request;
-    initData: InitData;
 }
 
 contract RouterSellTon with RouterBase {
     owner: Address;
     fee: Int;
+    nonce: Int = 0;
 
     init(owner: Address, fee: Int, time: Int) {
         self.owner = owner;
         self.fee = fee;
     }
 
-    receive (notify: TonTransferNotification){
+    receive (request: Request){
         let seller = context().sender;
-        let request = notify.request;
-        let initData = notify.initData;
 
-        nativeThrowUnless(invalid_seller, seller == initData.seller);
-
-        let orderInit = initOf OrderSellTon(initData);
+        let orderInit = initOf OrderSellTon(seller, myAddress(), self.nonce);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
+        self.nonce += 1;
 
         send(SendParameters{
             to: self.owner,
             value: self.fee,
-            bounce: false,
             mode: SendIgnoreErrors | SendPayGasSeparately,
-            body: null,
         });
 
         send(SendParameters{
             to: orderAddress,
             value: 0,
-            bounce: true,
             mode: SendIgnoreErrors | SendRemainingBalance,
             body: request.toCell(),
             code: orderInit.code,
@@ -44,8 +38,10 @@ contract RouterSellTon with RouterBase {
         });
     }
 
-    override get fun calculate_order(initData: InitData): Address {
-        let orderInit = initOf OrderSellTon(initData);
+    override get fun calculate_order(seller: Address, nonce: Int): Address {
+        nativeThrowUnless(invalid_nonce, nonce <= self.nonce);
+
+        let orderInit = initOf OrderSellTon(seller, myAddress(), nonce);
         return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }

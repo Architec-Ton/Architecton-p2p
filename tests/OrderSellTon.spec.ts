@@ -3,12 +3,11 @@ import { Address, beginCell, Cell, toNano } from '@ton/core';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
 import { Minter } from '../wrappers/jetton-minter';
-import { RouterSellTon, storeTonTransferNotification, TonTransferNotification} from '../wrappers/RouterSellTon';
+import { RouterSellTon } from '../wrappers/RouterSellTon';
 
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
-import { OrderSellTon, Request, InitData, storeJettonTransferNotification, storeRequest } from '../wrappers/OrderSellTon';
-import { Order, storeInitData } from '../build/Order/tact_Order';
+import { OrderSellTon, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/OrderSellTon';
 
 async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
@@ -152,12 +151,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        const orderInit: InitData = {
-            $$type: 'InitData',
-            seller: seller.address,
-            time: BigInt(Date.now())
-        };
-        orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(orderInit));
+        orderSellTon = blockchain.openContract(await OrderSellTon.fromInit(seller.address, seller.address, BigInt(Date.now())));
 
         buyJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -692,12 +686,7 @@ describe('Router', () => {
     }, 100000000);
 
     it('main flow', async () => {
-        const orderInit: InitData = {
-            $$type: 'InitData',
-            seller: seller.address,
-            time: BigInt(Date.now())
-        };
-        const orderSellTon = blockchain.openContract(OrderSellTon.fromAddress(await routerSellTon.getCalculateOrder(orderInit)));
+        const orderSellTon = blockchain.openContract(OrderSellTon.fromAddress(await routerSellTon.getCalculateOrder(seller.address, await routerSellTon.getNonce())));
 
         const buyJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -721,11 +710,9 @@ describe('Router', () => {
             to: routerSellTon.address,
             sendMode: 2,
             body: beginCell()
-                .store(storeTonTransferNotification({
-                    $$type: 'TonTransferNotification',
-                    initData: orderInit,
-                    request: request
-                }))
+                .store(storeRequest(
+                    request
+                ))
                 .endCell()
         });
 

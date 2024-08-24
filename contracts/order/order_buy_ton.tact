@@ -25,9 +25,11 @@ contract OrderBuyTon with OrderBase {
     open: Bool = false;
     filled: Bool = false;
 
-    init(initData: InitData) {
-        self.seller = initData.seller;
-        self.router = context().sender;
+    init(seller: Address, router: Address, nonce: Int) {
+        nativeThrowUnless(invalid_router, context().sender == router);
+
+        self.seller = seller;
+        self.router = router;
     }
 
     receive(request: Request) {
@@ -63,7 +65,7 @@ contract OrderBuyTon with OrderBase {
             mode: SendIgnoreErrors + SendPayGasSeparately,
         });
 
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, buyer, self.request.amount_sell, 0);
+        basicJettonTransfer(self.request.order_jetton_sell_wallet, buyer, self.request.amount_sell, 0, SendIgnoreErrors);
 
         self.withdraw()
     }
@@ -72,7 +74,7 @@ contract OrderBuyTon with OrderBase {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
 
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0);
+        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0, SendIgnoreErrors);
 
         self.withdraw()
     }

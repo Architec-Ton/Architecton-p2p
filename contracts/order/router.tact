@@ -4,6 +4,7 @@ import "./router_base";
 contract Router with RouterBase {
     owner: Address;
     fee: Int;
+    nonce: Int = 0;
 
     init(owner: Address, fee: Int, time: Int) {
         self.owner = owner;
@@ -12,79 +13,40 @@ contract Router with RouterBase {
 
     receive(notify: JettonTransferNotification) {
         let seller = notify.sender;
-        let payload = notify.forward_payload;
-        let requestCell = payload.loadRef();
-        let initDataCell = payload.loadRef().beginParse();
-
-        initDataCell.skipBits(32);
-
-        let initData: InitData = InitData {
-            seller: initDataCell.loadAddress(),
-            time: initDataCell.loadUint(64),
-        };
-
-        nativeThrowUnless(invalid_seller, seller == initData.seller);
+        let requestCell = notify.forward_payload.loadRef();
 
         if (context().value < deploy_fee + jetton_transfer_fee + self.fee) {
-            send(SendParameters{
-                to: context().sender,
-                value: 0,
-                bounce: true,
-                mode: SendIgnoreErrors | SendRemainingValue,
-                body: JettonTransfer {
-                    query_id: 0,
-                    amount: notify.amount,
-                    destination: seller,
-                    response_destination: seller,
-                    custom_payload: null,
-                    forward_payload: null,
-                    forward_ton_amount: 0
-                }.toCell()
-            });
+            basicJettonTransfer(context().sender, seller, notify.amount, 0, SendIgnoreErrors | SendRemainingBalance);
 
             nativeThrow(not_enough_ton);
         }
 
-        let orderInit = initOf Order(initData);
+        let orderInit = initOf Order(seller, myAddress(), self.nonce);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
+        self.nonce += 1;
 
         send(SendParameters{
             to: self.owner,
             value: self.fee,
-            bounce: false,
             mode: SendIgnoreErrors | SendPayGasSeparately,
-            body: null,
         });
 
         send(SendParameters{
             to: orderAddress,
             value: deploy_fee,
-            bounce: true,
             mode: SendIgnoreErrors | SendPayGasSeparately,
             body: requestCell,
             code: orderInit.code,
             data: orderInit.data
         });
 
-        send(SendParameters{
-            to: context().sender,
-            value: 0,
-            bounce: true,
-            mode: SendIgnoreErrors | SendRemainingBalance,
-            body: JettonTransfer {
-                query_id: 0,
-                amount: notify.amount,
-                destination: orderAddress,
-                response_destination: orderAddress,
-                custom_payload: null,
-                forward_payload: null,
-                forward_ton_amount: ton("0.01")
-            }.toCell()
-        });
+        basicJettonTransfer(context().sender, orderAddress, notify.amount, ton("0.01"), SendIgnoreErrors | SendRemainingBalance);
     }
 
-    override get fun calculate_order(initData: InitData): Address {
-        let orderInit = initOf Order(initData);
+    override get fun calculate_order(seller: Address, nonce: Int): Address {
+        nativeThrowUnless(invalid_nonce, nonce <= self.nonce);
+
+        let orderInit = initOf Order(seller, myAddress(), nonce);
         return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }

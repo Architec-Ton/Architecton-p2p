@@ -1,11 +1,6 @@
 import "./JettonMessages";
 import "./errcodes";
 
-message InitData {
-    seller: Address;
-    time: Int as uint64;
-}
-
 struct State {
     seller: Address;
     request: Request;
@@ -23,14 +18,10 @@ trait OrderBase {
     open: Bool;
 
     fun withdraw() {
-        self.open = false;
-
         send(SendParameters{
             to: self.seller,
             value: 0,
-            bounce: false,
             mode: SendRemainingBalance + SendDestroyIfZero,
-            body: null,
         });
     }
 

@@ -24,9 +24,11 @@ contract OrderSellTon with OrderBase {
 
     open: Bool = false;
 
-    init(initData: InitData) {
-        self.seller = initData.seller;
-        self.router = context().sender;
+    init(seller: Address, router: Address, nonce: Int) {
+        nativeThrowUnless(invalid_router, context().sender == router);
+
+        self.seller = seller;
+        self.router = router;
     }
 
     receive(request: Request) {
@@ -48,7 +50,7 @@ contract OrderSellTon with OrderBase {
 
         let buyer: Address = notify.sender;
 
-        basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0);
+        basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
 
         send(SendParameters{
             to: buyer,

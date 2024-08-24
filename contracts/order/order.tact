@@ -8,7 +8,7 @@ message Request {
     amount_sell: Int as coins;
     amount_buy: Int as coins;
 
-    timeout: Int as uint64;
+    timeout: Int as uint64 = 0;
 }
 
 contract Order with OrderBase {
@@ -29,9 +29,11 @@ contract Order with OrderBase {
     open: Bool = false;
     filled: Bool = false;
 
-    init(initData: InitData) {
-        self.seller = initData.seller;
-        self.router = context().sender;
+    init(seller: Address, router: Address, nonce: Int) {
+        nativeThrowUnless(invalid_router, context().sender == router);
+
+        self.seller = seller;
+        self.router = router;
     }
 
     receive(request: Request) {
@@ -58,9 +60,9 @@ contract Order with OrderBase {
             nativeThrowUnless(invalid_timeout, self.request.timeout > now());
             nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
 
-            basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0);
+            basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
 
-            basicJettonTransfer(self.request.order_jetton_sell_wallet, notify.sender, self.request.amount_sell, 0);
+            basicJettonTransfer(self.request.order_jetton_sell_wallet, notify.sender, self.request.amount_sell, 0, SendIgnoreErrors);
 
             self.withdraw()
         } else {
@@ -72,7 +74,7 @@ contract Order with OrderBase {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
 
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0);
+        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0, SendIgnoreErrors);
 
         self.withdraw()
     }
