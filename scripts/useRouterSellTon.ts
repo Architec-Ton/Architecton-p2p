@@ -2,7 +2,7 @@ import { Address, beginCell, toNano } from '@ton/core';
 import { NetworkProvider } from '@ton/blueprint';
 import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet } from './jetton-helpers';
-import { InitData, OrderSellTon, Request } from '../build/OrderSellTon/tact_OrderSellTon';
+import { OrderSellTon, Request } from '../build/OrderSellTon/tact_OrderSellTon';
 import { storeTonTransferNotification } from '../build/RouterSellTon/tact_RouterSellTon';
 
 export async function run(provider: NetworkProvider) {
@@ -14,12 +14,8 @@ export async function run(provider: NetworkProvider) {
 
     const buyJettonMaster = Address.parse(masters.get('ARC')!!);
 
-    const orderInit: InitData = {
-        $$type: 'InitData',
-        seller: provider.sender().address!,
-        nonce: BigInt(Date.now())
-    };
-    const orderSellTon = await OrderSellTon.fromInit(orderInit)
+    const nonce = BigInt(Date.now())
+    const orderSellTon = await OrderSellTon.fromInit(provider.sender().address!, nonce)
     const buyJettonWallet = await getJettonWallet(buyJettonMaster, orderSellTon.address);
 
     const timeout = 60 * 60 * 24 * 100;
@@ -41,7 +37,8 @@ export async function run(provider: NetworkProvider) {
         body: beginCell()
             .store(storeTonTransferNotification({
                 $$type: 'TonTransferNotification',
-                initData: orderInit,
+                seller: provider.sender().address!,
+                nonce: nonce,
                 request: request
             }))
             .endCell()

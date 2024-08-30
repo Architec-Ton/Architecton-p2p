@@ -2,7 +2,7 @@ import { Address, beginCell, toNano } from '@ton/core';
 import { NetworkProvider } from '@ton/blueprint';
 import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet, storeJettonTransfer } from './jetton-helpers';
-import { InitData, OrderBuyTon, Request, storeInitData, storeRequest  } from '../build/OrderBuyTon/tact_OrderBuyTon';
+import { OrderBuyTon, Request, storeRequest  } from '../build/OrderBuyTon/tact_OrderBuyTon';
 
 export async function run(provider: NetworkProvider) {
     const routerAddress = Address.parse('kQDzYNlEc8rEgYqa74tNrNpm4QMPrIDSEzCQoZWyKj7sdeF7')
@@ -13,12 +13,8 @@ export async function run(provider: NetworkProvider) {
 
     const sellJettonMaster = Address.parse(masters.get('BNK')!!);
 
-    const orderInit: InitData = {
-        $$type: 'InitData',
-        seller: provider.sender().address!,
-        nonce: BigInt(Date.now())
-    }
-    const order = await OrderBuyTon.fromInit(orderInit);
+    const nonce = BigInt(Date.now())
+    const order = await OrderBuyTon.fromInit(provider.sender().address!, nonce);
 
     const sellJettonWallet = await getJettonWallet(sellJettonMaster, order.address);
     const jettonWallet = await getJettonWallet(sellJettonMaster, provider.sender().address!);
@@ -41,9 +37,9 @@ export async function run(provider: NetworkProvider) {
             .store(storeRequest(request))
             .endCell())
         .storeRef(beginCell()
-            .store(storeInitData(orderInit))
-            .endCell()
-        )
+            .storeAddress(provider.sender().address!)
+            .storeInt(nonce, 257)
+            .endCell())
         .endCell()
         .asSlice();
 

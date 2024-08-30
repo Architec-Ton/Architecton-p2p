@@ -1,5 +1,5 @@
 import { Address, beginCell, toNano } from '@ton/core';
-import { InitData, OrderSellTon, Request, storeRequest } from '../wrappers/OrderSellTon';
+import { OrderSellTon, Request, storeRequest } from '../wrappers/OrderSellTon';
 import { NetworkProvider, sleep } from '@ton/blueprint';
 import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet } from './jetton-helpers';
@@ -7,13 +7,7 @@ import { getJettonDecimals, getJettonWallet } from './jetton-helpers';
 export async function run(provider: NetworkProvider) {
     const buyJettonMaster = Address.parse(masters.get('ARC')!!);
 
-    const orderInit: InitData = {
-        $$type: 'InitData',
-        seller: provider.sender().address!,
-        nonce: BigInt(Date.now())
-    }
-
-    const orderSellTon = provider.open(await OrderSellTon.fromInit(orderInit));
+    const orderSellTon = provider.open(await OrderSellTon.fromInit(provider.sender().address!, BigInt(Date.now())));
 
     const buyJettonWallet = await getJettonWallet(buyJettonMaster, orderSellTon.address);
 
