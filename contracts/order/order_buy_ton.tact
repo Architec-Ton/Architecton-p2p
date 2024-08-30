@@ -25,9 +25,9 @@ contract OrderBuyTon with OrderBase {
     open: Bool = false;
     filled: Bool = false;
 
-    init(initData: InitData) {
+    init(seller: Address, nonce: Int) {
         self.router = context().sender;
-        self.seller = initData.seller;
+        self.seller = seller;
     }
 
     receive(request: Request) {
@@ -68,7 +68,7 @@ contract OrderBuyTon with OrderBase {
         self.withdraw()
     }
 
-    receive("cancel") {
+    receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
 

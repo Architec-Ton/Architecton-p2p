@@ -1,10 +1,7 @@
 import "./JettonMessages";
 import "./errcodes";
 
-message InitData {
-    seller: Address;
-    nonce: Int as uint64;
-}
+message(0x71a9dc7a) Cancel {}
 
 struct State {
     seller: Address;

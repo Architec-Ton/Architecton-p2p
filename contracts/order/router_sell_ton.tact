@@ -3,7 +3,8 @@ import "./router_base";
 
 message TonTransferNotification {
     request: Request;
-    initData: InitData;
+    seller: Address;
+    nonce: Int
 }
 
 contract RouterSellTon with RouterBase {
@@ -18,7 +19,7 @@ contract RouterSellTon with RouterBase {
     receive (notify: TonTransferNotification) {
         let seller = context().sender;
 
-        let orderInit = initOf OrderSellTon(notify.initData);
+        let orderInit = initOf OrderSellTon(notify.seller, notify.nonce);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
 
         send(SendParameters{
@@ -37,8 +38,8 @@ contract RouterSellTon with RouterBase {
         });
     }
 
-    override get fun calculate_order(initData: InitData): Address {
-        let orderInit = initOf OrderSellTon(initData);
+    override get fun calculate_order(seller: Address, nonce: Int): Address {
+        let orderInit = initOf OrderSellTon(seller, nonce);
         return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }

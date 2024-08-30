@@ -1,13 +1,13 @@
 import { Blockchain, printTransactionFees, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, toNano } from '@ton/core';
-import { InitData, Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
+import { Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
 import { Minter } from '../wrappers/jetton-minter';
 
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
-import { Router, storeInitData } from '../wrappers/Router';
+import { Router } from '../wrappers/Router';
 
 async function checkStage(order: SandboxContract<Order>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
@@ -256,13 +256,7 @@ describe('First stage', () => {
             success: true
         });
 
-        const orderInit: InitData = {
-            $$type: 'InitData',
-            seller: seller.address,
-            nonce: BigInt(Date.now())
-        };
-
-        order = blockchain.openContract(await Order.fromInit(orderInit));
+        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Date.now())));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -348,7 +342,9 @@ describe('First stage', () => {
             {
                 value: toNano(1)
             },
-            'cancel'
+            {
+                $$type: 'Cancel'
+            }
         );
 
         expect(cancelTransaction.transactions).toHaveTransaction({
@@ -845,13 +841,7 @@ describe('Second stage', () => {
         // printTransactionFees(minterDeployResult.transactions);
         // prettyLogTransactions(minterDeployResult.transactions);
 
-        const orderInit: InitData = {
-            $$type: 'InitData',
-            seller: seller.address,
-            nonce: BigInt(Date.now())
-        };
-
-        order = blockchain.openContract(await Order.fromInit(orderInit));
+        order = blockchain.openContract(await Order.fromInit(seller.address, BigInt(Date.now())));
 
         sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
@@ -945,7 +935,9 @@ describe('Second stage', () => {
             {
                 value: toNano(1)
             },
-            'cancel'
+            {
+                $$type: 'Cancel'
+            }
         );
 
         expect(cancelTransaction.transactions).toHaveTransaction({
@@ -964,7 +956,9 @@ describe('Second stage', () => {
             {
                 value: toNano(1)
             },
-            'cancel'
+            {
+                $$type: 'Cancel'
+            }
         );
 
         expect(cancelTransaction.transactions).toHaveTransaction({
@@ -1518,14 +1512,8 @@ describe('Router', () => {
                 sellWalletCode
             )
         );
-
-        const orderInit: InitData = {
-            $$type: 'InitData',
-            seller: seller.address,
-            nonce: BigInt(Date.now())
-        };
-
-        const order = blockchain.openContract(Order.fromAddress(await router.getCalculateOrder(orderInit)));
+        const nonce = BigInt(Date.now())
+        const order = blockchain.openContract(Order.fromAddress(await router.getCalculateOrder(seller.address, nonce)));
         const sellJettonWalletOrder = blockchain.openContract(
             Wallet.createFromConfig({
                     owner_address: order.address, jetton_master_address: sellJettonMaster
@@ -1558,7 +1546,8 @@ describe('Router', () => {
                 .store(storeRequest(request))
                 .endCell())
             .storeRef(beginCell()
-                .store(storeInitData(orderInit))
+                .storeAddress(seller.address)
+                .storeInt(nonce, 257)
                 .endCell())
             .endCell()
             .asSlice();

@@ -1,11 +1,11 @@
 import { Address, beginCell, toNano } from '@ton/core';
-import { InitData, Order, Request, storeInitData, storeRequest } from '../wrappers/Order';
-import { NetworkProvider } from '@ton/blueprint';
+import { Order, Request, storeRequest } from '../wrappers/Order';
+import { NetworkProvider, sleep } from '@ton/blueprint';
 import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet, storeJettonTransfer } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
-    const routerAddress = Address.parse('kQDzYNlEc8rEgYqa74tNrNpm4QMPrIDSEzCQoZWyKj7sdeF7')
+    const routerAddress = Address.parse('kQB9D81YLkCu7Enyb6yGAo-zLEgogtmioFvkTqu75G9xhU7_')
     if (!await provider.isContractDeployed(routerAddress)) {
         console.log(`Router with address ${routerAddress.toString()} doesn't deployed`)
         return
@@ -14,12 +14,8 @@ export async function run(provider: NetworkProvider) {
     const sellJettonMaster = Address.parse(masters.get('BNK')!!);
     const buyJettonMaster = Address.parse(masters.get('ARC')!!);
 
-    const orderInit: InitData = {
-        $$type: 'InitData',
-        seller: provider.sender().address!,
-        nonce: BigInt(Date.now())
-    }
-    const order = await Order.fromInit(orderInit);
+    const nonce = BigInt(Date.now())
+    const order = await Order.fromInit(provider.sender().address!, nonce);
 
     const sellJettonWallet = await getJettonWallet(sellJettonMaster, order.address);
     const buyJettonWallet = await getJettonWallet(buyJettonMaster, order.address);
@@ -46,9 +42,9 @@ export async function run(provider: NetworkProvider) {
             .store(storeRequest(request))
             .endCell())
         .storeRef(beginCell()
-            .store(storeInitData(orderInit))
-            .endCell()
-        )
+            .storeAddress(provider.sender().address!)
+            .storeInt(nonce, 257)
+            .endCell())
         .endCell()
         .asSlice();
 

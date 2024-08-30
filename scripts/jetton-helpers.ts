@@ -156,3 +156,18 @@ export async function getJettonDecimals(jettonMaster: Address) {
 
     return Number(jettonContent.decimals!)
 }
+
+export async function getOrder(jettonMaster: Address, owner: Address) {
+    const {gas_used, stack} = await client.runMethod(jettonMaster, 'get_wallet_address', [
+        {
+            type: 'slice',
+            cell: beginCell().storeAddress(owner).endCell()
+        },
+        {
+            type: 'int',
+            value: 1n
+        }
+    ])
+
+    return stack.readAddressOpt()!!
+}
