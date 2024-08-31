@@ -1,0 +1,43 @@
+;;
+;; Type: Request
+;; Header: 0x74d591aa
+;; TLB: request#74d591aa order_jetton_sell_wallet:address order_jetton_buy_wallet:address jetton_sell_master:address jetton_buy_master:address amount_sell:coins amount_buy:coins timeout:uint64 = Request
+;;
+
+(slice, ((slice, slice, slice, slice, int, int, int))) $Request$_load(slice sc_0) inline_ref {
+    throw_unless(129, sc_0~load_uint(32) == 1960153514);
+    var order_jetton_sell_wallet = sc_0~load_msg_addr();
+    var order_jetton_buy_wallet = sc_0~load_msg_addr();
+    var jetton_sell_master = sc_0~load_msg_addr();
+    slice sc_1 = sc_0~load_ref().begin_parse();
+    var jetton_buy_master = sc_1~load_msg_addr();
+    var amount_sell = sc_1~load_coins();
+    var amount_buy = sc_1~load_coins();
+    var timeout = sc_1~load_uint(64);
+    return (sc_0, (order_jetton_sell_wallet, order_jetton_buy_wallet, jetton_sell_master, jetton_buy_master, amount_sell, amount_buy, timeout));
+}
+
+;;
+;; Type: Order
+;;
+
+(slice, slice, (slice, slice, slice, slice, int, int, int), int, int) $Order$_load(slice sc_0) inline {
+    var seller = sc_0~load_msg_addr();
+    var router = sc_0~load_msg_addr();
+    slice sc_1 = sc_0~load_ref().begin_parse();
+    var request = sc_1~$Request$_load();
+    var open = sc_1~load_int(1);
+    var filled = sc_1~load_int(1);
+    return (seller, router, request, open, filled);
+}
+
+(slice, slice, (slice, slice, slice, slice, int, int, int), int, int) $Order$_contract_load(slice router) impure inline_ref {
+    slice $sc = get_data().begin_parse();
+    if ($sc~load_int(1)) {
+        return $Order$_load($sc);
+    } else {
+        ;; Allow only workchain deployments
+        throw_unless(137, my_address().preload_uint(11) == 1024);
+        return ($sc~load_msg_addr(), router, (my_address(), my_address(), my_address(), my_address(), 0, 0, 0), false, false);
+    }
+}
