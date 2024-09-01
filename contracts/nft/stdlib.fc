@@ -880,3 +880,5 @@ const int RESERVE_BOUNCE_ON_ACTION_FAIL = 16;
 cell create_token_onchain_metadata(cell content_dict) inline {
     return begin_cell().store_uint(0, 8).store_dict(content_dict).end_cell();
 }
+
+() __tact_nop() asm "NOP";

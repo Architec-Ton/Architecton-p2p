@@ -16,7 +16,7 @@ async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxC
     expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_buy_wallet.toString()).toEqual(request.order_jetton_buy_wallet.toString());
     expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString());
-    expect(currentState.request.amount_buy).toEqual(request.amount_buy);
+    expect(currentState.request.amount_sell).toEqual(request.amount_sell);
     expect(currentState.request.amount_buy).toEqual(request.amount_buy);
     expect(currentState.request.timeout).toEqual(request.timeout);
 }
