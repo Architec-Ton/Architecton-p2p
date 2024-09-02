@@ -57,7 +57,6 @@ export async function run(provider: NetworkProvider) {
     await provider.sender().send({
         value: toNano(0.3),
         to: nftAddress,
-        sendMode: 2,
         body: sellTransferBody
     });
 }

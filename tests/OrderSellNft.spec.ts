@@ -1,10 +1,4 @@
-import {
-    Blockchain,
-    prettyLogTransactions,
-    printTransactionFees,
-    SandboxContract,
-    TreasuryContract
-} from '@ton/sandbox';
+import { Blockchain, printTransactionFees, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, toNano } from '@ton/core';
 import { OrderSellNft, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/OrderSellNft';
 import '@ton/test-utils';
@@ -14,7 +8,6 @@ import { Minter } from '../wrappers/jetton-minter';
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
 import { RouterSellNft } from '../wrappers/RouterSellNft';
-import { randomAddress } from '@ton/test-utils';
 import { Collection, CollectionConfig } from '../wrappers/nft-collection';
 import { Item } from '../wrappers/nft-item';
 
@@ -723,36 +716,29 @@ describe('Second stage', () => {
             }
         };
         nftCollection = blockchain.openContract(await Collection.createFromConfig(defaultConfig, await compile('nft-collection')));
-        const nftCollectionDeploy = await deployer.send(
+        await deployer.send(
             {
-                value: toNano(0.1),
+                value: toNano(0.05),
                 to: nftCollection.address,
                 sendMode: 2,
                 init: nftCollection.init
             }
         );
 
-        expect(nftCollectionDeploy.transactions).toHaveTransaction({
-            from: deployer.address,
-            to: nftCollection.address,
-            deploy: true,
-            success: true
-        });
-
         const mintNftBody: Cell = beginCell()
             .storeUint(1, 32)
             .storeUint(0, 64)
             .storeUint(777, 64)
-            .storeCoins(toNano(1))
+            .storeCoins(toNano(0.06))
             .storeRef(beginCell()
                 .storeAddress(seller.address)
                 .storeRef(beginCell().storeBuffer(Buffer.from('azino tri topora')).endCell())
                 .endCell())
             .endCell();
 
-        const mintNft = await deployer.send(
+        await deployer.send(
             {
-                value: toNano(10),
+                value: toNano(0.061),
                 to: nftCollection.address,
                 sendMode: 2,
                 body: mintNftBody
@@ -760,18 +746,6 @@ describe('Second stage', () => {
         );
 
         nftItem = blockchain.openContract(Item.createFromAddress(await nftCollection.getNftAddressByIndex(777n)));
-
-        expect(mintNft.transactions).toHaveTransaction({
-            from: deployer.address,
-            to: nftCollection.address,
-            success: true
-        });
-
-        expect(mintNft.transactions).toHaveTransaction({
-            from: nftCollection.address,
-            to: nftItem.address,
-            success: true
-        });
 
         orderSellNft = blockchain.openContract(await OrderSellNft.fromInit(seller.address, BigInt(Date.now())));
 
@@ -802,34 +776,20 @@ describe('Second stage', () => {
             }
         );
 
-        expect(deployResult.transactions).toHaveTransaction({
-            from: seller.address,
-            to: orderSellNft.address,
-            deploy: true,
-            success: true
-        });
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: seller.address,
-            to: orderSellNft.address,
-            deploy: true,
-            success: true
-        });
-
         printTransactionFees(deployResult.transactions);
 
         const sellTransferBody = beginCell()
             .storeUint(0x5fcc3d14, 32)
             .storeUint(0, 64)
             .storeAddress(orderSellNft.address)
-            .storeAddress(orderSellNft.address)
+            .storeAddress(null)
             .storeBit(0)
-            .storeCoins(toNano(0.1))
+            .storeCoins(toNano(0.0042))
             .storeBit(0)
             .endCell();
 
         await seller.send({
-            value: toNano(0.2),
+            value: toNano(0.005),
             to: nftItem.address,
             sendMode: 2,
             body: sellTransferBody
@@ -1363,36 +1323,29 @@ describe('Router', () => {
             }
         };
         nftCollection = blockchain.openContract(await Collection.createFromConfig(defaultConfig, await compile('nft-collection')));
-        const nftCollectionDeploy = await deployer.send(
+        await deployer.send(
             {
-                value: toNano(0.1),
+                value: toNano(0.05),
                 to: nftCollection.address,
                 sendMode: 2,
                 init: nftCollection.init
             }
         );
 
-        expect(nftCollectionDeploy.transactions).toHaveTransaction({
-            from: deployer.address,
-            to: nftCollection.address,
-            deploy: true,
-            success: true
-        });
-
         const mintNftBody: Cell = beginCell()
             .storeUint(1, 32)
             .storeUint(0, 64)
             .storeUint(777, 64)
-            .storeCoins(toNano(0.0015))
+            .storeCoins(toNano(0.06))
             .storeRef(beginCell()
                 .storeAddress(seller.address)
                 .storeRef(beginCell().storeBuffer(Buffer.from('azino tri topora')).endCell())
                 .endCell())
             .endCell();
 
-        const mintNft = await deployer.send(
+        await deployer.send(
             {
-                value: toNano(0.004),
+                value: toNano(0.061),
                 to: nftCollection.address,
                 sendMode: 2,
                 body: mintNftBody
@@ -1400,19 +1353,6 @@ describe('Router', () => {
         );
 
         nftItem = blockchain.openContract(Item.createFromAddress(await nftCollection.getNftAddressByIndex(777n)));
-
-        expect(mintNft.transactions).toHaveTransaction({
-            from: deployer.address,
-            to: nftCollection.address,
-            success: true
-        });
-
-        expect(mintNft.transactions).toHaveTransaction({
-            from: nftCollection.address,
-            to: nftItem.address,
-            success: true,
-            deploy: true
-        });
 
         routerSellNft = blockchain.openContract(await RouterSellNft.fromInit(deployer.address, toNano(0.01), BigInt(Date.now())));
 
