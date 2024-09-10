@@ -1,3 +1,5 @@
+const jetton_transfer_fee: Int = ton("0.04"); // ~ 0.04 TON, medium fee for any amount of Jetton is 0.037 TON - docs
+
 message(0x7362d09c) JettonTransferNotification {
     query_id: Int as uint64;                // arbitrary request number
     amount: Int as coins;                   // amount of jettons to transfer

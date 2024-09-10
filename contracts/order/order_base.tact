@@ -9,8 +9,6 @@ struct State {
     open: Bool;
 }
 
-const jetton_transfer_fee: Int = ton("0.04"); // ~ 0.04 TON, medium fee for any amount of Jetton is 0.037 TON - docs
-
 trait OrderBase {
     seller: Address;
     router: Address;
