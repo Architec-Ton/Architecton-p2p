@@ -1,0 +1,69 @@
+#include "stdlib.fc";
+
+global cell __tact_context_sys;
+
+slice __tact_compute_contract_address(int chain, cell code, cell data) inline_ref {
+    var b = begin_cell()
+        .store_uint(0, 2)
+        .store_uint(3, 2)
+        .store_uint(0, 1)
+        .store_ref(code)
+        .store_ref(data)
+        .end_cell();
+    var hash = cell_hash(b);
+
+    return begin_cell()
+        .store_uint(2, 2)
+        .store_uint(0, 1)
+        .store_int(chain, 8)
+        .store_uint(hash, 256)
+        .end_cell()
+        .begin_parse();
+}
+
+forall X -> X __tact_not_null(X x) impure inline {
+    throw_if(128, null?(x)); return x;
+}
+
+builder __tact_store_bool(builder b, int v) inline {
+    return b.store_int(v, 1);
+}
+
+() $global_send((slice, int, int, cell, cell, cell) $params) impure inline_ref {
+    var (($params'to, $params'value, $params'mode, $body, $params'code, $params'data)) = $params;
+    builder $b = begin_cell();
+    $b = store_int($b, 24, 6);
+    $b = store_slice($b, $params'to);
+    $b = store_coins($b, $params'value);
+    $b = store_int($b, 0, 105);
+    if ((((~ null?($params'code))) ? (true) : ((~ null?($params'data))))) {
+        $b = __tact_store_bool($b, true);
+        builder $bc = begin_cell();
+        $bc = store_int($bc, 0, 2);
+        if ((~ null?($params'code))) {
+            $bc = __tact_store_bool($bc, true);
+            $bc = store_ref($bc, __tact_not_null($params'code));
+        } else {
+            $bc = __tact_store_bool($bc, false);
+        }
+        if ((~ null?($params'data))) {
+            $bc = __tact_store_bool($bc, true);
+            $bc = store_ref($bc, __tact_not_null($params'data));
+        } else {
+            $bc = __tact_store_bool($bc, false);
+        }
+        $bc = __tact_store_bool($bc, false);
+        $b = __tact_store_bool($b, true);
+        $b = store_ref($b, end_cell($bc));
+    } else {
+        $b = __tact_store_bool($b, false);
+    }
+    if ((~ null?($body))) {
+        $b = __tact_store_bool($b, true);
+        $b = store_ref($b, __tact_not_null($body));
+    } else {
+        $b = __tact_store_bool($b, false);
+    }
+    cell $c = end_cell($b);
+    send_raw_message($c, $params'mode);
+}

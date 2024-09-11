@@ -1,0 +1,24 @@
+#include "tact-stdlib.fc";
+
+;;
+;; Type: Order
+;;
+
+cell $Order$init$_store(slice seller, int nonce) inline_ref {
+    return begin_cell()
+        .store_int(0, 1)
+        .store_slice(seller)
+        .store_uint(nonce, 64)
+        .end_cell();
+}
+
+;;
+;; Type: Router
+;;
+
+(slice, int) $Router$_contract_load() impure inline_ref {
+    slice $sc = get_data().begin_parse();
+    __tact_context_sys = $sc~load_ref();
+    $sc~load_int(1);
+    return ($sc~load_msg_addr(), $sc~load_coins());
+}

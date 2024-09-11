@@ -8,6 +8,7 @@ import { Minter } from '../wrappers/jetton-minter';
 import { storeJettonTransfer } from '../scripts/jetton-helpers';
 import { compile } from '@ton/blueprint';
 import { Order } from '../wrappers/order-func';
+import { InitData, Router } from '../wrappers/router-func';
 
 // const orderCode = Cell.fromBoc(Buffer.from('', 'hex'))[0];
 
@@ -303,13 +304,6 @@ describe('First stage', () => {
                 body: beginCell().store(storeRequest(request)).endCell()
             }
         );
-
-        expect(deployResult.transactions).toHaveTransaction({
-            from: seller.address,
-            to: order.address,
-            deploy: true,
-            success: true
-        });
 
         expect(deployResult.transactions).toHaveTransaction({
             from: seller.address,
@@ -2249,397 +2243,407 @@ describe('total check', () => {
 });
 
 
-// describe('Router', () => {
-//     let blockchain: Blockchain;
-//
-//     let deployer: SandboxContract<TreasuryContract>;
-//     let treasury: SandboxContract<TreasuryContract>;
-//
-//     let sellJettonWalletDeployer: SandboxContract<Wallet>;
-//     let sellJettonWalletSeller: SandboxContract<Wallet>;
-//     let sellJettonWalletBuyer: SandboxContract<Wallet>;
-//
-//     let buyJettonWalletDeployer: SandboxContract<Wallet>;
-//     let buyJettonWalletSeller: SandboxContract<Wallet>;
-//     let buyJettonWalletBuyer: SandboxContract<Wallet>;
-//
-//     let seller: SandboxContract<TreasuryContract>;
-//     let buyer: SandboxContract<TreasuryContract>;
-//
-//     let sellMinter: SandboxContract<Minter>;
-//     let buyMinter: SandboxContract<Minter>;
-//
-//     let router: SandboxContract<Router>;
-//
-//     let sellWalletCode: Cell;
-//     let buyWalletCode: Cell;
-//     let sellMinterCode: Cell;
-//     let buyMinterCode: Cell;
-//
-//     let sellJettonMaster: Address;
-//     let buyJettonMaster: Address;
-//
-//     beforeEach(async () => {
-//         sellWalletCode = await compile('jetton-wallet');
-//         buyWalletCode = await compile('jetton-wallet');
-//         sellMinterCode = await compile('jetton-minter');
-//         buyMinterCode = await compile('jetton-minter');
-//
-//         blockchain = await Blockchain.create();
-//         deployer = await blockchain.treasury('deployer');
-//         treasury = await blockchain.treasury('treasury');
-//         seller = await blockchain.treasury('seller');
-//         buyer = await blockchain.treasury('buyer');
-//
-//         sellMinter = blockchain.openContract(
-//             Minter.createFromConfig(
-//                 {
-//                     total_supply: 0n,
-//                     admin_address: deployer.address,
-//                     next_admin_address: treasury.address,
-//                     jetton_wallet_code: sellWalletCode,
-//                     metadata_url: beginCell().storeBit(1).endCell()
-//                 },
-//                 sellMinterCode
-//             )
-//         );
-//
-//         buyMinter = blockchain.openContract(
-//             Minter.createFromConfig(
-//                 {
-//                     total_supply: 0n,
-//                     admin_address: deployer.address,
-//                     next_admin_address: treasury.address,
-//                     jetton_wallet_code: buyWalletCode,
-//                     metadata_url: beginCell().storeBit(0).endCell()
-//                 },
-//                 buyMinterCode
-//             )
-//         );
-//
-//         sellJettonMaster = sellMinter.address;
-//         buyJettonMaster = buyMinter.address;
-//
-//         sellJettonWalletDeployer = blockchain.openContract(
-//             Wallet.createFromConfig(
-//                 { owner_address: deployer.address, jetton_master_address: sellJettonMaster },
-//                 sellWalletCode
-//             )
-//         );
-//
-//         buyJettonWalletDeployer = blockchain.openContract(
-//             Wallet.createFromConfig(
-//                 { owner_address: deployer.address, jetton_master_address: buyJettonMaster },
-//                 buyWalletCode
-//             )
-//         );
-//
-//         sellJettonWalletSeller = blockchain.openContract(
-//             Wallet.createFromConfig({
-//                     owner_address: seller.address, jetton_master_address: sellJettonMaster
-//                 },
-//                 sellWalletCode
-//             )
-//         );
-//
-//         buyJettonWalletSeller = blockchain.openContract(
-//             Wallet.createFromConfig({
-//                     owner_address: seller.address, jetton_master_address: buyJettonMaster
-//                 },
-//                 buyWalletCode
-//             )
-//         );
-//
-//         sellJettonWalletBuyer = blockchain.openContract(
-//             Wallet.createFromConfig({
-//                     owner_address: buyer.address, jetton_master_address: sellJettonMaster
-//                 },
-//                 sellWalletCode
-//             )
-//         );
-//
-//         buyJettonWalletBuyer = blockchain.openContract(
-//             Wallet.createFromConfig({
-//                     owner_address: buyer.address, jetton_master_address: buyJettonMaster
-//                 },
-//                 buyWalletCode
-//             )
-//         );
-//
-//         let master_msg = beginCell()
-//             .storeUint(395134233, 32) // opCode: TokenTransferInternal / 0x178d4519
-//             .storeUint(0, 64) // query_id
-//             .storeCoins(toNano('1000000')) // jetton_amount
-//             .storeAddress(sellMinter.address) // from_address
-//             .storeAddress(deployer.address) // response_address
-//             .storeCoins(0) // forward_ton_amount
-//             .storeUint(0, 1) // whether forward_payload or not
-//             .endCell();
-//
-//         await sellMinter.sendMint(deployer.getSender(), { // 0x642b7d07
-//             value: toNano('1.5'),
-//             queryID: 10,
-//             toAddress: deployer.address,
-//             tonAmount: toNano('0.4'),
-//             master_msg: master_msg
-//         });
-//
-//         const deployerSellTransferBody = beginCell()
-//             .store(storeJettonTransfer({
-//                 $$type: 'JettonTransfer',
-//                 query_id: 0n,
-//                 amount: toNano(10n),
-//                 destination: seller.address,
-//                 response_destination: seller.address,
-//                 custom_payload: beginCell().endCell(),
-//                 forward_ton_amount: 0n,
-//                 forward_payload: beginCell().endCell().asSlice()
-//             }))
-//             .endCell();
-//
-//         await deployer.send({
-//             value: toNano(1),
-//             to: sellJettonWalletDeployer.address,
-//             sendMode: 2,
-//             body: deployerSellTransferBody
-//         });
-//
-//         master_msg = beginCell()
-//             .storeUint(395134233, 32) // opCode: TokenTransferInternal / 0x178d4519
-//             .storeUint(0, 64) // query_id
-//             .storeCoins(toNano('1000000')) // jetton_amount
-//             .storeAddress(buyMinter.address) // from_address
-//             .storeAddress(deployer.address) // response_address
-//             .storeCoins(0) // forward_ton_amount
-//             .storeUint(0, 1) // whether forward_payload or not
-//             .endCell();
-//
-//         await buyMinter.sendMint(deployer.getSender(), { // 0x642b7d07
-//             value: toNano('1.5'),
-//             queryID: 10,
-//             toAddress: deployer.address,
-//             tonAmount: toNano('0.4'),
-//             master_msg: master_msg
-//         });
-//
-//         const deployerBuyTransferBody = beginCell()
-//             .store(storeJettonTransfer({
-//                 $$type: 'JettonTransfer',
-//                 query_id: 0n,
-//                 amount: toNano(10n),
-//                 destination: buyer.address,
-//                 response_destination: buyer.address,
-//                 custom_payload: beginCell().endCell(),
-//                 forward_ton_amount: 0n,
-//                 forward_payload: beginCell().endCell().asSlice()
-//             }))
-//             .endCell();
-//
-//         await deployer.send({
-//             value: toNano(1),
-//             to: buyJettonWalletDeployer.address,
-//             sendMode: 2,
-//             body: deployerBuyTransferBody
-//         });
-//
-//         router = blockchain.openContract(await Router.fromInit(deployer.address, toNano(0.01), BigInt(Date.now())));
-//
-//         const routerDeployResult = await deployer.send(
-//             {
-//                 value: toNano(0.02),
-//                 to: router.address,
-//                 sendMode: 2,
-//                 init: router.init
-//             }
-//         );
-//
-//         printTransactionFees(routerDeployResult.transactions);
-//
-//         expect(routerDeployResult.transactions).toHaveTransaction({
-//             from: deployer.address,
-//             to: router.address,
-//             deploy: true,
-//             success: true
-//         });
-//     }, 100000000);
-//
-//     it('should deploy & mint & transfer jettons', async () => {
-//         // the check is done inside beforeEach
-//         // blockchain and order are ready to use
-//     }, 100000000);
-//
-//     it('main flow', async () => {
-//         const sellJettonWalletRouter = blockchain.openContract(
-//             Wallet.createFromConfig({
-//                     owner_address: router.address, jetton_master_address: sellJettonMaster
-//                 },
-//                 sellWalletCode
-//             )
-//         );
-//
-//         const orderInit: InitData = {
-//             $$type: 'InitData',
-//             seller: seller.address,
-//             nonce: BigInt(Date.now())
-//         };
-//
-//         const order = blockchain.openContract(Order.createFromAddress(await router.getCalculateOrder(orderInit)));
-//         const sellJettonWalletOrder = blockchain.openContract(
-//             Wallet.createFromConfig({
-//                     owner_address: order.address, jetton_master_address: sellJettonMaster
-//                 },
-//                 sellWalletCode
-//             )
-//         );
-//
-//         const buyJettonWalletOrder = blockchain.openContract(
-//             Wallet.createFromConfig({
-//                     owner_address: order.address, jetton_master_address: buyJettonMaster
-//                 },
-//                 buyWalletCode
-//             )
-//         );
-//
-//         const request: Request = {
-//             $$type: 'Request',
-//             order_jetton_sell_wallet: sellJettonWalletOrder.address,
-//             order_jetton_buy_wallet: buyJettonWalletOrder.address,
-//             jetton_sell_master: sellMinter.address,
-//             jetton_buy_master: buyMinter.address,
-//             amount_sell: 10n,
-//             amount_buy: 5n,
-//             timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
-//         };
-//
-//         const createOrderBody = beginCell()
-//             .storeRef(beginCell()
-//                 .store(storeRequest(request))
-//                 .endCell())
-//             .storeRef(beginCell()
-//                 .store(storeInitData(orderInit))
-//                 .endCell())
-//             .endCell()
-//             .asSlice();
-//
-//         const sellTransferBody = beginCell()
-//             .store(storeJettonTransfer({
-//                 $$type: 'JettonTransfer',
-//                 query_id: 0n,
-//                 amount: 10n,
-//                 destination: router.address,
-//                 response_destination: router.address,
-//                 custom_payload: beginCell().endCell(),
-//                 forward_ton_amount: toNano(0.08),
-//                 forward_payload: createOrderBody
-//             }))
-//             .endCell();
-//
-//         const sellJettonTransferResult = await seller.send({
-//             value: toNano(0.1),
-//             to: sellJettonWalletSeller.address,
-//             sendMode: 2,
-//             body: sellTransferBody
-//         });
-//
-//         expect(sellJettonTransferResult.transactions).toHaveTransaction({
-//             from: sellJettonWalletSeller.address,
-//             to: sellJettonWalletRouter.address,
-//             success: true
-//         });
-//
-//         expect(sellJettonTransferResult.transactions).toHaveTransaction({
-//             from: sellJettonWalletRouter.address,
-//             to: router.address,
-//             success: true
-//         });
-//
-//         expect(sellJettonTransferResult.transactions).toHaveTransaction({
-//             from: router.address,
-//             to: order.address,
-//             success: true,
-//             deploy: true
-//         });
-//
-//         expect(sellJettonTransferResult.transactions).toHaveTransaction({
-//             from: router.address,
-//             to: sellJettonWalletRouter.address,
-//             success: true
-//         });
-//
-//         expect(sellJettonTransferResult.transactions).toHaveTransaction({
-//             from: sellJettonWalletRouter.address,
-//             to: sellJettonWalletOrder.address,
-//             deploy: true,
-//             success: true
-//         });
-//
-//         expect(sellJettonTransferResult.transactions).toHaveTransaction({
-//             from: sellJettonWalletOrder.address,
-//             to: order.address,
-//             success: true
-//         });
-//         printTransactionFees(sellJettonTransferResult.transactions);
-//
-//         const buyTransferBody = beginCell()
-//             .store(storeJettonTransfer({
-//                 $$type: 'JettonTransfer',
-//                 query_id: 0n,
-//                 amount: 5n,
-//                 destination: order.address,
-//                 response_destination: order.address,
-//                 custom_payload: beginCell().endCell(),
-//                 forward_ton_amount: toNano(0.083313),
-//                 forward_payload: beginCell().endCell().asSlice()
-//             }))
-//             .endCell();
-//
-//         const buyJettonTransferResult = await buyer.send({
-//             value: toNano(0.1),
-//             to: buyJettonWalletBuyer.address,
-//             sendMode: 2,
-//             body: buyTransferBody
-//         });
-//
-//         printTransactionFees(buyJettonTransferResult.transactions);
-//
-//
-//         expect(buyJettonTransferResult.transactions).toHaveTransaction({
-//             from: buyJettonWalletBuyer.address,
-//             to: buyJettonWalletOrder.address,
-//             deploy: true,
-//             success: true
-//         });
-//
-//         expect(buyJettonTransferResult.transactions).toHaveTransaction({
-//             from: buyJettonWalletOrder.address,
-//             to: order.address,
-//             success: true
-//         });
-//
-//         expect(buyJettonTransferResult.transactions).toHaveTransaction({
-//             from: buyJettonWalletOrder.address,
-//             to: buyJettonWalletSeller.address,
-//             success: true,
-//             deploy: true
-//         });
-//
-//         expect(buyJettonTransferResult.transactions).toHaveTransaction({
-//             from: sellJettonWalletOrder.address,
-//             to: sellJettonWalletBuyer.address,
-//             success: true,
-//             deploy: true
-//         });
-//
-//         let sellJettonBuyerBalance = (await sellJettonWalletBuyer.getJettonData())[0];
-//         let buyJettonBuyerBalance = (await buyJettonWalletBuyer.getJettonData())[0];
-//         let buyJettonSellerBalance = (await buyJettonWalletSeller.getJettonData())[0];
-//         let sellJettonOrderBalance = (await sellJettonWalletOrder.getJettonData())[0];
-//         let buyJettonOrderBalance = (await buyJettonWalletOrder.getJettonData())[0];
-//
-//         expect(sellJettonBuyerBalance).toEqual(request.amount_sell);
-//         expect(buyJettonSellerBalance).toEqual(request.amount_buy);
-//         expect(buyJettonBuyerBalance).toEqual(9999999995n);
-//         expect(sellJettonOrderBalance).toEqual(0n);
-//         expect(buyJettonOrderBalance).toEqual(0n);
-//     }, 100000000);
-// });
+describe('Router', () => {
+    let blockchain: Blockchain;
+
+    let deployer: SandboxContract<TreasuryContract>;
+    let treasury: SandboxContract<TreasuryContract>;
+
+    let sellJettonWalletDeployer: SandboxContract<Wallet>;
+    let sellJettonWalletSeller: SandboxContract<Wallet>;
+    let sellJettonWalletBuyer: SandboxContract<Wallet>;
+
+    let buyJettonWalletDeployer: SandboxContract<Wallet>;
+    let buyJettonWalletSeller: SandboxContract<Wallet>;
+    let buyJettonWalletBuyer: SandboxContract<Wallet>;
+
+    let seller: SandboxContract<TreasuryContract>;
+    let buyer: SandboxContract<TreasuryContract>;
+
+    let sellMinter: SandboxContract<Minter>;
+    let buyMinter: SandboxContract<Minter>;
+
+    let router: SandboxContract<Router>;
+
+    let sellWalletCode: Cell;
+    let buyWalletCode: Cell;
+    let sellMinterCode: Cell;
+    let buyMinterCode: Cell;
+
+    let sellJettonMaster: Address;
+    let buyJettonMaster: Address;
+
+    beforeEach(async () => {
+        sellWalletCode = await compile('jetton-wallet');
+        buyWalletCode = await compile('jetton-wallet');
+        sellMinterCode = await compile('jetton-minter');
+        buyMinterCode = await compile('jetton-minter');
+
+        blockchain = await Blockchain.create();
+        deployer = await blockchain.treasury('deployer');
+        treasury = await blockchain.treasury('treasury');
+        seller = await blockchain.treasury('seller');
+        buyer = await blockchain.treasury('buyer');
+
+        sellMinter = blockchain.openContract(
+            Minter.createFromConfig(
+                {
+                    total_supply: 0n,
+                    admin_address: deployer.address,
+                    next_admin_address: treasury.address,
+                    jetton_wallet_code: sellWalletCode,
+                    metadata_url: beginCell().storeBit(1).endCell()
+                },
+                sellMinterCode
+            )
+        );
+
+        buyMinter = blockchain.openContract(
+            Minter.createFromConfig(
+                {
+                    total_supply: 0n,
+                    admin_address: deployer.address,
+                    next_admin_address: treasury.address,
+                    jetton_wallet_code: buyWalletCode,
+                    metadata_url: beginCell().storeBit(0).endCell()
+                },
+                buyMinterCode
+            )
+        );
+
+        sellJettonMaster = sellMinter.address;
+        buyJettonMaster = buyMinter.address;
+
+        sellJettonWalletDeployer = blockchain.openContract(
+            Wallet.createFromConfig(
+                { owner_address: deployer.address, jetton_master_address: sellJettonMaster },
+                sellWalletCode
+            )
+        );
+
+        buyJettonWalletDeployer = blockchain.openContract(
+            Wallet.createFromConfig(
+                { owner_address: deployer.address, jetton_master_address: buyJettonMaster },
+                buyWalletCode
+            )
+        );
+
+        sellJettonWalletSeller = blockchain.openContract(
+            Wallet.createFromConfig({
+                    owner_address: seller.address, jetton_master_address: sellJettonMaster
+                },
+                sellWalletCode
+            )
+        );
+
+        buyJettonWalletSeller = blockchain.openContract(
+            Wallet.createFromConfig({
+                    owner_address: seller.address, jetton_master_address: buyJettonMaster
+                },
+                buyWalletCode
+            )
+        );
+
+        sellJettonWalletBuyer = blockchain.openContract(
+            Wallet.createFromConfig({
+                    owner_address: buyer.address, jetton_master_address: sellJettonMaster
+                },
+                sellWalletCode
+            )
+        );
+
+        buyJettonWalletBuyer = blockchain.openContract(
+            Wallet.createFromConfig({
+                    owner_address: buyer.address, jetton_master_address: buyJettonMaster
+                },
+                buyWalletCode
+            )
+        );
+
+        let master_msg = beginCell()
+            .storeUint(395134233, 32) // opCode: TokenTransferInternal / 0x178d4519
+            .storeUint(0, 64) // query_id
+            .storeCoins(toNano('1000000')) // jetton_amount
+            .storeAddress(sellMinter.address) // from_address
+            .storeAddress(deployer.address) // response_address
+            .storeCoins(0) // forward_ton_amount
+            .storeUint(0, 1) // whether forward_payload or not
+            .endCell();
+
+        await sellMinter.sendMint(deployer.getSender(), { // 0x642b7d07
+            value: toNano('1.5'),
+            queryID: 10,
+            toAddress: deployer.address,
+            tonAmount: toNano('0.4'),
+            master_msg: master_msg
+        });
+
+        const deployerSellTransferBody = beginCell()
+            .store(storeJettonTransfer({
+                $$type: 'JettonTransfer',
+                query_id: 0n,
+                amount: toNano(10n),
+                destination: seller.address,
+                response_destination: seller.address,
+                custom_payload: beginCell().endCell(),
+                forward_ton_amount: 0n,
+                forward_payload: beginCell().endCell().asSlice()
+            }))
+            .endCell();
+
+        await deployer.send({
+            value: toNano(1),
+            to: sellJettonWalletDeployer.address,
+            sendMode: 2,
+            body: deployerSellTransferBody
+        });
+
+        master_msg = beginCell()
+            .storeUint(395134233, 32) // opCode: TokenTransferInternal / 0x178d4519
+            .storeUint(0, 64) // query_id
+            .storeCoins(toNano('1000000')) // jetton_amount
+            .storeAddress(buyMinter.address) // from_address
+            .storeAddress(deployer.address) // response_address
+            .storeCoins(0) // forward_ton_amount
+            .storeUint(0, 1) // whether forward_payload or not
+            .endCell();
+
+        await buyMinter.sendMint(deployer.getSender(), { // 0x642b7d07
+            value: toNano('1.5'),
+            queryID: 10,
+            toAddress: deployer.address,
+            tonAmount: toNano('0.4'),
+            master_msg: master_msg
+        });
+
+        const deployerBuyTransferBody = beginCell()
+            .store(storeJettonTransfer({
+                $$type: 'JettonTransfer',
+                query_id: 0n,
+                amount: toNano(10n),
+                destination: buyer.address,
+                response_destination: buyer.address,
+                custom_payload: beginCell().endCell(),
+                forward_ton_amount: 0n,
+                forward_payload: beginCell().endCell().asSlice()
+            }))
+            .endCell();
+
+        await deployer.send({
+            value: toNano(1),
+            to: buyJettonWalletDeployer.address,
+            sendMode: 2,
+            body: deployerBuyTransferBody
+        });
+
+        const routerInitData: InitData = {
+            $$type: 'InitData',
+            owner: deployer.address,
+            fee: toNano(0.01),
+            time: BigInt(Date.now()),
+            code: await compile('order-func')
+        }
+        const routerCode = await compile('router-func')
+        router = blockchain.openContract(Router.createFromConfig(routerInitData, routerCode));
+
+        const routerDeployResult = await deployer.send(
+            {
+                value: toNano(0.02),
+                to: router.address,
+                sendMode: 2,
+                init: router.init,
+                body: beginCell().storeUint(0, 32).endCell()
+            }
+        );
+
+        printTransactionFees(routerDeployResult.transactions);
+
+        expect(routerDeployResult.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: router.address,
+            deploy: true,
+            success: true
+        });
+    }, 100000000);
+
+    it('should deploy & mint & transfer jettons', async () => {
+        // the check is done inside beforeEach
+        // blockchain and order are ready to use
+        const [owner, fee] = await router.getState()
+
+        expect(owner.toString()).toBe(deployer.address.toString())
+        expect(fee).toBe(toNano(0.01))
+    }, 100000000);
+
+    it('main flow', async () => {
+        const sellJettonWalletRouter = blockchain.openContract(
+            Wallet.createFromConfig({
+                    owner_address: router.address, jetton_master_address: sellJettonMaster
+                },
+                sellWalletCode
+            )
+        );
+
+        const nonce = BigInt(Date.now())
+
+        const order = blockchain.openContract(Order.createFromAddress(await router.getCalculateOrder(seller.address, nonce)));
+        const sellJettonWalletOrder = blockchain.openContract(
+            Wallet.createFromConfig({
+                    owner_address: order.address, jetton_master_address: sellJettonMaster
+                },
+                sellWalletCode
+            )
+        );
+
+        const buyJettonWalletOrder = blockchain.openContract(
+            Wallet.createFromConfig({
+                    owner_address: order.address, jetton_master_address: buyJettonMaster
+                },
+                buyWalletCode
+            )
+        );
+
+        const request: Request = {
+            $$type: 'Request',
+            order_jetton_sell_wallet: sellJettonWalletOrder.address,
+            order_jetton_buy_wallet: buyJettonWalletOrder.address,
+            jetton_sell_master: sellMinter.address,
+            jetton_buy_master: buyMinter.address,
+            amount_sell: 10n,
+            amount_buy: 5n,
+            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+        };
+
+        const createOrderBody = beginCell()
+            .storeRef(beginCell()
+                .store(storeRequest(request))
+                .endCell())
+            .storeRef(beginCell()
+                .storeAddress(seller.address)
+                .storeUint(nonce, 64)
+                .endCell())
+            .endCell()
+            .asSlice();
+
+        const sellTransferBody = beginCell()
+            .store(storeJettonTransfer({
+                $$type: 'JettonTransfer',
+                query_id: 0n,
+                amount: 10n,
+                destination: router.address,
+                response_destination: router.address,
+                custom_payload: beginCell().endCell(),
+                forward_ton_amount: toNano(0.08),
+                forward_payload: createOrderBody
+            }))
+            .endCell();
+
+        const sellJettonTransferResult = await seller.send({
+            value: toNano(0.1),
+            to: sellJettonWalletSeller.address,
+            sendMode: 2,
+            body: sellTransferBody
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: sellJettonWalletSeller.address,
+            to: sellJettonWalletRouter.address,
+            success: true
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: sellJettonWalletRouter.address,
+            to: router.address,
+            success: true
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: router.address,
+            to: order.address,
+            success: true,
+            deploy: true
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: router.address,
+            to: sellJettonWalletRouter.address,
+            success: true
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: sellJettonWalletRouter.address,
+            to: sellJettonWalletOrder.address,
+            deploy: true,
+            success: true
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: sellJettonWalletOrder.address,
+            to: order.address,
+            success: true
+        });
+        printTransactionFees(sellJettonTransferResult.transactions);
+
+        const buyTransferBody = beginCell()
+            .store(storeJettonTransfer({
+                $$type: 'JettonTransfer',
+                query_id: 0n,
+                amount: 5n,
+                destination: order.address,
+                response_destination: order.address,
+                custom_payload: beginCell().endCell(),
+                forward_ton_amount: toNano(0.083313),
+                forward_payload: beginCell().endCell().asSlice()
+            }))
+            .endCell();
+
+        const buyJettonTransferResult = await buyer.send({
+            value: toNano(0.1),
+            to: buyJettonWalletBuyer.address,
+            sendMode: 2,
+            body: buyTransferBody
+        });
+
+        printTransactionFees(buyJettonTransferResult.transactions);
+
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletBuyer.address,
+            to: buyJettonWalletOrder.address,
+            deploy: true,
+            success: true
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletOrder.address,
+            to: order.address,
+            success: true
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletOrder.address,
+            to: buyJettonWalletSeller.address,
+            success: true,
+            deploy: true
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: sellJettonWalletOrder.address,
+            to: sellJettonWalletBuyer.address,
+            success: true,
+            deploy: true
+        });
+
+        let sellJettonBuyerBalance = (await sellJettonWalletBuyer.getJettonData())[0];
+        let buyJettonBuyerBalance = (await buyJettonWalletBuyer.getJettonData())[0];
+        let buyJettonSellerBalance = (await buyJettonWalletSeller.getJettonData())[0];
+        let sellJettonOrderBalance = (await sellJettonWalletOrder.getJettonData())[0];
+        let buyJettonOrderBalance = (await buyJettonWalletOrder.getJettonData())[0];
+
+        expect(sellJettonBuyerBalance).toEqual(request.amount_sell);
+        expect(buyJettonSellerBalance).toEqual(request.amount_buy);
+        expect(buyJettonBuyerBalance).toEqual(9999999995n);
+        expect(sellJettonOrderBalance).toEqual(0n);
+        expect(buyJettonOrderBalance).toEqual(0n);
+    }, 100000000);
+});

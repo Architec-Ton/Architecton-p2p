@@ -1,3 +1,5 @@
+#include "stdlib.fc";
+
 ;;
 ;; Type: Request
 ;; Header: 0x74d591aa
@@ -5,7 +7,6 @@
 ;;
 
 (slice, ((slice, slice, slice, slice, int, int, int))) $Request$_load(slice sc_0) inline_ref {
-    throw_unless(129, sc_0~load_uint(32) == 1960153514);
     var order_jetton_sell_wallet = sc_0~load_msg_addr();
     var order_jetton_buy_wallet = sc_0~load_msg_addr();
     var jetton_sell_master = sc_0~load_msg_addr();
@@ -25,6 +26,7 @@
     var seller = sc_0~load_msg_addr();
     var router = sc_0~load_msg_addr();
     slice sc_1 = sc_0~load_ref().begin_parse();
+    throw_unless(129, sc_1~load_uint(32) == 1960153514);
     var request = sc_1~$Request$_load();
     var open = sc_1~load_int(1);
     var filled = sc_1~load_int(1);

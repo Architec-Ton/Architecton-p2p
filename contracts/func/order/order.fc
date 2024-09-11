@@ -1,6 +1,5 @@
 #pragma version =0.4.4;
 
-#include "stdlib.fc";
 #include "storage.fc";
 
 
@@ -60,7 +59,7 @@ _ %state() method_id (77589) {
         (slice seller, slice router, (slice order_jetton_sell_wallet, slice order_jetton_buy_wallet, slice jetton_sell_master, slice jetton_buy_master, int amount_sell, int amount_buy, int timeout), int open, int filled) = $Order$_contract_load(msg_sender_addr);
 
         if (slice_bits(in_msg) >= 32) {
-            op = in_msg.preload_uint(32);
+            op = in_msg~load_uint(32);
         }
 
         ;; Receive Request message
@@ -74,7 +73,6 @@ _ %state() method_id (77589) {
 
         ;; Receive JettonTransferNotification message
         elseif (op == 1935855772) {
-            throw_unless(129, in_msg~load_uint(32) == 1935855772);
             in_msg~skip_bits(64);
             var amount = in_msg~load_coins();
             var sender = in_msg~load_msg_addr();

@@ -18,16 +18,6 @@ export type InitData = {
     nonce: bigint;
 }
 
-export function storeInitData(src: InitData) {
-    return (builder: Builder) => {
-        let b_0 = builder;
-        b_0.storeBit(0);
-        b_0.storeUint(2121923400, 32);
-        b_0.storeAddress(src.seller);
-        b_0.storeUint(src.nonce, 64);
-    };
-}
-
 export function walletConfigToCell(initData: any): Cell {
     return beginCell()
         .storeBit(0)

@@ -1,0 +1,122 @@
+#pragma version =0.4.4;
+#pragma allow-post-modification;
+#pragma compute-asm-ltr;
+
+#include "stdlib.fc";
+#include "storage.fc";
+
+;;
+;; Contract Router functions
+;;
+
+() $global_basicJettonTransfer(slice $jetton_wallet, slice $destination, int $amount, int $forward_ton_amount) impure inline_ref {
+    $global_send(($jetton_wallet, 40000000, 130, begin_cell()
+        .store_uint(260734629, 32)
+        .store_uint(0, 64)
+        .store_coins($amount)
+        .store_slice($destination)
+        .store_slice($destination)
+        .store_int(false, 1)
+        .store_coins($forward_ton_amount)
+        .store_int(false, 1)
+        .end_cell(),
+        null(), null()));
+}
+
+;;
+;; Receivers of a Contract Router
+;;
+
+() $Router$_internal_binary_JettonTransferNotification(slice owner, int fee, int $notify'amount, slice $seller, slice $forward_payload, slice sender, int value) impure inline {
+    cell $requestCell = $forward_payload~load_ref();
+    slice $initCell = begin_parse($forward_payload~load_ref());
+    slice $init_seller = $initCell~load_msg_addr();
+    int $init_nonce = $initCell~load_uint(64);
+    if (value < 50000000 + fee) {
+        $global_basicJettonTransfer(sender, $seller, $notify'amount, 0);
+        throw(37);
+    }
+    cell data = $Order$init$_store($init_seller, $init_nonce);
+    slice $orderAddress = __tact_compute_contract_address(0, __tact_context_sys, data);
+    $global_send((owner, fee, 3, null(), null(), null()));
+    $global_send(($orderAddress, 10000000, 3, $requestCell, __tact_context_sys, data));
+    $global_basicJettonTransfer(sender, $orderAddress, $notify'amount, 10000000);
+}
+
+;;
+;; Get methods of a Contract Router
+;;
+
+_ %calculate_order(slice $seller, int $nonce) method_id(75064) {
+    cell data = $Order$init$_store($seller, $nonce);
+    var (owner, fee) = $Router$_contract_load();
+    return __tact_compute_contract_address(0, __tact_context_sys, data);
+}
+
+_ %state() method_id(77589) {
+    return $Router$_contract_load();
+}
+
+_ lazy_deployment_completed() method_id {
+    return get_data().begin_parse().load_int(1);
+}
+
+;;
+;; Routing of a Contract Router
+;;
+
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+
+    ;; Context
+    var cs = in_msg_cell.begin_parse();
+    var msg_flags = cs~load_uint(4);
+    var msg_bounced = -(msg_flags & 1);
+    slice msg_sender_addr = cs~load_msg_addr();
+
+    ;; Handle operation
+    if (~ msg_bounced) {
+        ;; Parse incoming message
+        var (owner, fee) = $Router$_contract_load();
+        int op = -1;
+
+        if (slice_bits(in_msg) >= 32) {
+            op = in_msg~load_uint(32);
+        }
+
+        ;; Simple send
+        if (op == 0) {
+
+        }
+
+        ;; Receive JettonTransferNotification message
+        elseif (op == 1935855772) {
+            in_msg~skip_bits(64);
+            $Router$_internal_binary_JettonTransferNotification(owner, fee, in_msg~load_coins(), in_msg~load_msg_addr(), in_msg, msg_sender_addr, msg_value);
+        }
+
+        ;; Receive NewOwner message
+        elseif (op == 487474722) {
+            var new_owner = in_msg~load_msg_addr();
+            throw_unless(132, ( equal_slice_bits(msg_sender_addr, owner) ));
+            owner = new_owner;
+        }
+
+        ;; Receive NewFee message
+        elseif (op == 2560766511) {
+            fee = in_msg~load_coins();
+            throw_unless(132, ( equal_slice_bits(msg_sender_addr, owner) ));
+        }
+        else {
+            throw(130);
+        }
+
+        set_data(begin_cell()
+            .store_ref(__tact_context_sys)
+            .store_int(true, 1)
+            .store_slice(owner)
+            .store_coins(fee)
+            .end_cell()
+        );
+    }
+}
