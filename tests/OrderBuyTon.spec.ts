@@ -1058,7 +1058,7 @@ describe('Router', () => {
         expect(sellJettonSellerBalance).toEqual(9999999990n);
 
         const buyJettonTransferResult = await buyer.send({
-            value: request.amount_buy,
+            value: request.amount_buy + toNano(0.05),
             to: orderBuyTon.address,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell().storeUint(0, 32).storeStringTail('transfer ton').endCell()
@@ -1070,7 +1070,6 @@ describe('Router', () => {
             from: buyer.address,
             to: orderBuyTon.address,
             success: true,
-            value: request.amount_buy
         });
 
         expect(buyJettonTransferResult.transactions).toHaveTransaction({

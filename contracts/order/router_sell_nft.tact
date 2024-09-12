@@ -28,12 +28,6 @@ contract RouterSellNft with RouterBase {
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
 
         send(SendParameters{
-            to: self.owner,
-            value: self.fee,
-            mode: SendIgnoreErrors | SendPayGasSeparately,
-        });
-
-        send(SendParameters{
             to: orderAddress,
             value: deploy_fee,
             mode: SendIgnoreErrors | SendPayGasSeparately,
@@ -41,6 +35,7 @@ contract RouterSellNft with RouterBase {
             code: orderInit.code,
             data: orderInit.data
         });
+
         send_nft(nft_transfer_fee + ton("0.0042"), context().sender, orderAddress, orderAddress, ton("0.0042"));
     }
 

@@ -1,4 +1,10 @@
-import { Blockchain, printTransactionFees, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import {
+    Blockchain,
+    prettyLogTransactions,
+    printTransactionFees,
+    SandboxContract,
+    TreasuryContract
+} from '@ton/sandbox';
 import { Address, beginCell, Cell, toNano } from '@ton/core';
 import { Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
 import '@ton/test-utils';
@@ -1672,5 +1678,18 @@ describe('Router', () => {
         expect(buyJettonBuyerBalance).toEqual(9999999995n);
         expect(sellJettonOrderBalance).toEqual(0n);
         expect(buyJettonOrderBalance).toEqual(0n);
+
+        const deployerBalanceBefore = await deployer.getBalance()
+        const a = await router.send(
+            deployer.getSender(),
+            {
+                value: toNano(0.01)
+            },
+            {
+                $$type: 'Withdraw'
+            }
+        )
+        expect(deployerBalanceBefore + toNano(0.01) <= (await deployer.getBalance())).toBe(true)
+
     }, 100000000);
 });

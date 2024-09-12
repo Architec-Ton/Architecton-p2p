@@ -23,15 +23,9 @@ contract RouterSellTon with RouterBase {
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
 
         send(SendParameters{
-            to: self.owner,
-            value: self.fee,
-            mode: SendIgnoreErrors | SendPayGasSeparately,
-        });
-
-        send(SendParameters{
             to: orderAddress,
-            value: 0,
-            mode: SendIgnoreErrors | SendRemainingBalance,
+            value: context().value-context().readForwardFee() - self.fee,
+            mode: SendIgnoreErrors,
             body: notify.request.toCell(),
             code: orderInit.code,
             data: orderInit.data

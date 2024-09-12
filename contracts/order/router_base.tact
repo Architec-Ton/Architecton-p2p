@@ -1,4 +1,4 @@
-const deploy_fee: Int = ton("0.01");
+const deploy_fee: Int = ton("0.005");
 
 message NewOwner {
     new_owner: Address;
@@ -7,6 +7,8 @@ message NewOwner {
 message NewFee {
     new_fee: Int;
 }
+
+message Withdraw {}
 
 trait RouterBase {
     owner: Address;
@@ -22,6 +24,15 @@ trait RouterBase {
     receive(msg: NewFee) {
         nativeThrowUnless(access_denided, self.owner == context().sender);
         self.fee = msg.new_fee;
+    }
+
+    receive(msg: Withdraw) {
+        nativeThrowUnless(access_denided, self.owner == context().sender);
+        send(SendParameters{
+            to: self.owner,
+            value: 0,
+            mode: SendRemainingBalance,
+        });
     }
 
     get fun owner(): Address {
