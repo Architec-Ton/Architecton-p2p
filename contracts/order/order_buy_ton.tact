@@ -6,7 +6,7 @@ message Request {
     amount_sell: Int as coins;
     amount_buy: Int as coins;
 
-    timeout: Int;
+    timeout: Int as uint64 = 0;
 }
 
 contract OrderBuyTon with OrderBase {
