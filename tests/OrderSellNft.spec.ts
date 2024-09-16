@@ -23,6 +23,7 @@ import { Item } from '../wrappers/nft-item';
 async function checkStage(orderSellNft: SandboxContract<OrderSellNft>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await orderSellNft.getState();
     expect(currentState.open).toEqual(open);
+    expect(currentState.type).toEqual(3n)
 
     expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.nft_address.toString()).toEqual(request.nft_address.toString());

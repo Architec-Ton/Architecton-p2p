@@ -12,6 +12,7 @@ import { RouterBuyTon } from '../wrappers/RouterBuyTon';
 async function checkStage(orderBuyTon: SandboxContract<OrderBuyTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await orderBuyTon.getState();
     expect(currentState.open).toEqual(open);
+    expect(currentState.type).toEqual(1n)
 
     expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_sell_wallet.toString()).toEqual(request.order_jetton_sell_wallet.toString());

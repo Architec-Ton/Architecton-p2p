@@ -12,6 +12,7 @@ import { OrderSellTon, Request, storeJettonTransferNotification, storeRequest } 
 async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
     expect(currentState.open).toEqual(open);
+    expect(currentState.type).toEqual(2n)
 
     expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_buy_wallet.toString()).toEqual(request.order_jetton_buy_wallet.toString());

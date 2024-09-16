@@ -4,6 +4,7 @@ import "./errcodes";
 message(0x71a9dc7a) Cancel {}
 
 struct State {
+    type: Int as uint8;
     seller: Address;
     request: Request;
     open: Bool;
@@ -12,6 +13,7 @@ struct State {
 trait OrderBase {
     seller: Address;
     router: Address;
+    type: Int;
 
     request: Request;
 
@@ -27,6 +29,7 @@ trait OrderBase {
 
     get fun state(): State {
         return State {
+            type: self.type,
             seller: self.seller,
             request: self.request,
             open: self.open,

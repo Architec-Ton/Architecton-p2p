@@ -14,6 +14,7 @@ message Request {
 contract Order with OrderBase {
     seller: Address;
     router: Address;
+    type: Int as uint8 = 0;
 
     request: Request = Request {
         order_jetton_sell_wallet: newAddress(0,0),

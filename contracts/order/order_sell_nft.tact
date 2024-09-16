@@ -4,6 +4,7 @@ import "./NftMessages";
 contract OrderSellNft with OrderBase {
     seller: Address;
     router: Address;
+    type: Int as uint8 = 3;
 
     request: Request = Request {
         nft_address: newAddress(0,0),
