@@ -3,7 +3,7 @@ import { OrderBuyTon } from '../wrappers/OrderBuyTon';
 import { NetworkProvider } from '@ton/blueprint';
 
 export async function run(provider: NetworkProvider) {
-    const orderAddress = Address.parse('EQBpZvplYUYJmdJYZxS6QaPJZZqX3fupep3sVUJudd2o2OwR')
+    const orderAddress = Address.parse('kQDAgPg3kkxSh8iymFfm1QwYK8MUX1JQBz0aCdKsUH_IqPxM')
     if (!await provider.isContractDeployed(orderAddress)) {
         console.log(`Order with address ${orderAddress.toString()} doesn't deployed`)
         return

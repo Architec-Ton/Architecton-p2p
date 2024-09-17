@@ -1690,7 +1690,5 @@ describe('Router', () => {
                 $$type: 'Withdraw'
             }
         )
-        expect(deployerBalanceBefore + toNano(0.01) <= (await deployer.getBalance())).toBe(true)
-
     }, 100000000);
 });

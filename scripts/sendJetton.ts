@@ -4,7 +4,7 @@ import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet, storeJettonTransfer } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
-    const orderAddress = Address.parse('kQDR6PQPL6Fml-PuJypKrP-adIqmfTrdjruP0ZZEYd_1adFa')
+    const orderAddress = Address.parse('kQDRqGgAqx3hMEiMMj7_iO2B8b4Utrfq8lQskd5Fs4WuCOGz')
     if (!await provider.isContractDeployed(orderAddress)) {
         console.log(`Order with address ${orderAddress.toString()} doesn't deployed`)
         return
@@ -23,13 +23,13 @@ export async function run(provider: NetworkProvider) {
             destination: orderAddress,
             response_destination: orderAddress,
             custom_payload: beginCell().endCell(),
-            forward_ton_amount: toNano(0.08),
+            forward_ton_amount: toNano(0.1),
             forward_payload: beginCell().endCell().asSlice(),
         }))
         .endCell()
 
     await provider.sender().send({
-            value: toNano(0.15),
+            value: toNano(0.14),
             to: jettonWallet,
             body: transferBody,
         }

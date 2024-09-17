@@ -24,7 +24,7 @@ contract RouterSellTon with RouterBase {
 
         send(SendParameters{
             to: orderAddress,
-            value: context().value-context().readForwardFee() - self.fee,
+            value: context().value - context().readForwardFee() - self.fee,
             mode: SendIgnoreErrors,
             body: notify.request.toCell(),
             code: orderInit.code,

@@ -29,8 +29,8 @@ contract Router with RouterBase {
 
         send(SendParameters{
             to: orderAddress,
-            value: deploy_fee,
-            mode: SendIgnoreErrors | SendPayGasSeparately,
+            value: context().value - self.fee - context().readForwardFee() - jetton_transfer_fee,
+            mode: SendIgnoreErrors,
             body: requestCell,
             code: orderInit.code,
             data: orderInit.data

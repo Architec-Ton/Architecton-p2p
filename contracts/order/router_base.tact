@@ -30,8 +30,8 @@ trait RouterBase {
         nativeThrowUnless(access_denided, self.owner == context().sender);
         send(SendParameters{
             to: self.owner,
-            value: 0,
-            mode: SendRemainingBalance,
+            value: myBalance() - ton("0.01"),
+            mode: SendIgnoreErrors,
         });
     }
 
