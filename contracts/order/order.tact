@@ -45,32 +45,33 @@ contract Order with OrderBase {
     }
 
     receive(notify: JettonTransferNotification) {
-        nativeThrowUnless(order_not_filled, self.filled);
+        if(!self.SmartThrow(order_not_filled, self.filled, notify.sender, notify.amount)) {return;}
         let sender: Address = context().sender;
 
         if (sender == self.request.order_jetton_sell_wallet) {
-            nativeThrowUnless(order_already_opened, !self.open);
-            nativeThrowUnless(access_denided, notify.sender == self.router);
-            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_sell);
+            if(!self.SmartThrow(access_denided, notify.sender == self.router, notify.sender, notify.amount)) {return;}
+            if(!self.SmartThrow(order_already_opened, !self.open, self.seller, notify.amount)) {return;}
+            if(!self.SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_sell, self.seller, notify.amount)) {return;}
 
             self.open = true;
         } else if (sender == self.request.order_jetton_buy_wallet) {
-            nativeThrowUnless(order_not_opened, self.open);
-            nativeThrowUnless(invalid_timeout, self.request.timeout > now());
-            nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
+            if(!self.SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
+            if(!self.SmartThrow(invalid_timeout, self.request.timeout > now(), notify.sender, notify.amount)) {return;}
+            if(!self.SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_buy, notify.sender, notify.amount)) {return;}
 
             basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
             basicJettonTransfer(self.request.order_jetton_sell_wallet, notify.sender, self.request.amount_sell, 0, SendIgnoreErrors);
 
             self.withdraw()
         } else {
-            throw(invalid_address);
+            if(!self.SmartThrow(invalid_address, false, notify.sender, notify.amount)) {return;}
         }
     }
 
     receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
+        nativeThrowUnless(not_enough_ton, myBalance() >= jetton_transfer_fee);
 
         basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0, SendIgnoreErrors);
 

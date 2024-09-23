@@ -6,7 +6,7 @@ import { OrderSellTon, Request } from '../build/OrderSellTon/tact_OrderSellTon';
 import { storeTonTransferNotification } from '../build/RouterSellTon/tact_RouterSellTon';
 
 export async function run(provider: NetworkProvider) {
-    const routerAddress = Address.parse('kQC4YcIjbV9rx_5_Ko2WgNTqMXWp0q7ih-9X_GPriI2ha7UJ')
+    const routerAddress = Address.parse('kQCszIdtWB_EQUMOLQ5LPPRd-_OhUdD0B3-pd5UfhaeuJ9v3')
     if (!await provider.isContractDeployed(routerAddress)) {
         console.log(`Router with address ${routerAddress.toString()} doesn't deployed`)
         return

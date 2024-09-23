@@ -1,6 +1,7 @@
 import "./order_base";
 import "./NftMessages";
 
+// TODO: add withdrawal when failure
 contract OrderSellNft with OrderBase {
     seller: Address;
     router: Address;

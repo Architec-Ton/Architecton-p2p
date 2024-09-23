@@ -1,4 +1,4 @@
-const deploy_fee: Int = ton("0.005");
+const deploy_fee: Int = ton("0.006");
 
 message NewOwner {
     new_owner: Address;

@@ -5,7 +5,7 @@ import { getJettonDecimals, getJettonWallet, storeJettonTransfer } from './jetto
 import { OrderBuyTon, Request, storeRequest  } from '../build/OrderBuyTon/tact_OrderBuyTon';
 
 export async function run(provider: NetworkProvider) {
-    const routerAddress = Address.parse('kQBzxKNB6ISFk1KAvlCVQ0TKwunkFEtbHgAOcythztboTrSz')
+    const routerAddress = Address.parse('kQALn75zX71ojoGyH1ogO55DcWe5BAkxRUwgAe-CJg_49RAm')
     if (!await provider.isContractDeployed(routerAddress)) {
         console.log(`Router with address ${routerAddress.toString()} doesn't deployed`)
         return

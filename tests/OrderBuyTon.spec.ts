@@ -264,8 +264,11 @@ describe('First stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: seller.address,
             to: orderBuyTon.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderBuyTon.address,
+            to: seller.address,
         });
 
         await checkStage(orderBuyTon, seller, request, false);
@@ -362,8 +365,11 @@ describe('First stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: errJettonWalletOrder.address,
             to: orderBuyTon.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderBuyTon.address,
+            to: errJettonWalletOrder.address,
         });
 
         await checkStage(orderBuyTon, seller, request, false);
@@ -400,8 +406,11 @@ describe('First stage', () => {
         expect(sellJettonTransferResult.transactions).toHaveTransaction({
             from: sellJettonWalletOrder.address,
             to: orderBuyTon.address,
-            success: false,
-            exitCode: 132
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: orderBuyTon.address,
+            to: sellJettonWalletOrder.address,
         });
 
         await checkStage(orderBuyTon, seller, request, false);
@@ -438,8 +447,11 @@ describe('First stage', () => {
         expect(sellJettonTransferResult.transactions).toHaveTransaction({
             from: sellJettonWalletOrder.address,
             to: orderBuyTon.address,
-            success: false,
-            exitCode: 39
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: orderBuyTon.address,
+            to: sellJettonWalletOrder.address,
         });
 
         await checkStage(orderBuyTon, seller, request, false);
@@ -754,8 +766,11 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: seller.address,
             to: orderBuyTon.address,
-            success: false,
-            exitCode: 41
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderBuyTon.address,
+            to: seller.address,
         });
 
         await checkStage(orderBuyTon, seller, request, true);
@@ -772,9 +787,15 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyer.address,
             to: orderBuyTon.address,
-            success: false,
-            exitCode: 37
         });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: orderBuyTon.address,
+            to: buyer.address,
+        });
+        printTransactionFees(buyJettonTransferResult.transactions)
+
+        await checkStage(orderBuyTon, seller, request, true);
     }, 100000000);
 
     it('main flow', async () => {

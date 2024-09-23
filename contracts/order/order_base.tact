@@ -27,6 +27,20 @@ trait OrderBase {
         });
     }
 
+    fun SmartThrow(code: Int, condition: Bool, to: Address, amount: Int): Bool {
+        if (!condition) {
+            if (context().value >= jetton_transfer_fee) {
+                basicJettonTransfer(context().sender, to, amount, 0, SendIgnoreErrors);
+            } else {
+                dump(context().value);
+                nativeThrow(not_enough_ton);
+            }
+            emit(beginCell().storeUint(code, 32).endCell());
+        }
+
+        return condition;
+    }
+
     get fun state(): State {
         return State {
             type: self.type,

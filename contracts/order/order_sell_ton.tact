@@ -42,11 +42,10 @@ contract OrderSellTon with OrderBase {
     }
 
     receive(notify: JettonTransferNotification) {
-        nativeThrowUnless(order_not_opened, self.open);
-        nativeThrowUnless(invalid_address, context().sender == self.request.order_jetton_buy_wallet);
-        nativeThrowUnless(invalid_timeout, self.request.timeout > now());
-        nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
-
+        if (!self.SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
+        if (!self.SmartThrow(invalid_address, context().sender == self.request.order_jetton_buy_wallet, notify.sender, notify.amount)) {return;}
+        if (!self.SmartThrow(invalid_timeout, self.request.timeout > now(), notify.sender, notify.amount)) {return;}
+        if (!self.SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_buy, notify.sender, notify.amount)) {return;}
         let buyer: Address = notify.sender;
 
         basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
@@ -64,6 +63,7 @@ contract OrderSellTon with OrderBase {
     receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
+        nativeThrowUnless(not_enough_ton, myBalance() >= jetton_transfer_fee);
 
         self.withdraw()
     }

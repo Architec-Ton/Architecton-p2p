@@ -41,20 +41,28 @@ contract OrderBuyTon with OrderBase {
     }
 
     receive(notify: JettonTransferNotification) {
-        nativeThrowUnless(order_not_filled, self.filled);
-        nativeThrowUnless(order_already_opened, !self.open);
-        nativeThrowUnless(access_denided, notify.sender == self.router);
-        nativeThrowUnless(invalid_address, context().sender == self.request.order_jetton_sell_wallet);
-        nativeThrowUnless(invalid_timeout, self.request.timeout > now());
-        nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_sell);
+        if (!self.SmartThrow(order_not_filled, self.filled, notify.sender, notify.amount)) {return;}
+        if (!self.SmartThrow(access_denided, notify.sender == self.router, notify.sender, notify.amount)) {return;}
+        if (!self.SmartThrow(order_already_opened, !self.open, self.seller, notify.amount)) {return;}
+        if (!self.SmartThrow(invalid_address, context().sender == self.request.order_jetton_sell_wallet, self.seller, notify.amount)) {return;}
+        if (!self.SmartThrow(invalid_timeout, self.request.timeout > now(), self.seller, notify.amount)) {return;}
+        if (!self.SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_sell, self.seller, notify.amount)) {return;}
 
         self.open = true;
     }
 
     receive("transfer ton") {
         let ctx = context();
-        nativeThrowUnless(order_not_opened, self.open);
-        nativeThrowUnless(not_enough_ton, ctx.value >= self.request.amount_buy);
+
+        if (!self.open || ctx.value < self.request.amount_buy) {
+            send(SendParameters{
+                to: context().sender,
+                value: ctx.value - ctx.readForwardFee(),
+                bounce: true,
+                mode: SendIgnoreErrors + SendPayGasSeparately,
+            });
+            return;
+        }
 
         let buyer: Address = ctx.sender;
         send(SendParameters{
@@ -72,6 +80,7 @@ contract OrderBuyTon with OrderBase {
     receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
+        nativeThrowUnless(not_enough_ton, myBalance() >= jetton_transfer_fee);
 
         basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0, SendIgnoreErrors);
 

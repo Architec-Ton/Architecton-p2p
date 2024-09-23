@@ -5,7 +5,7 @@ import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet, storeJettonTransfer } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
-    const routerAddress = Address.parse('kQCsF9Vo1va8Jds158TM_80eAUmLDX8ZsELGkZkO8YcfeZC2')
+    const routerAddress = Address.parse('kQC0OSiLe0H_wvfaIE6rSrjbAk81Hk3wknkudojWprNFxZoc')
     if (!await provider.isContractDeployed(routerAddress)) {
         console.log(`Router with address ${routerAddress.toString()} doesn't deployed`)
         return

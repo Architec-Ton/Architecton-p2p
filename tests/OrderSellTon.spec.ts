@@ -288,8 +288,11 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: seller.address,
             to: orderSellTon.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: seller.address,
         });
 
         await checkStage(orderSellTon, seller, request, true);
@@ -386,8 +389,11 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: errJettonWalletOrder.address,
             to: orderSellTon.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: errJettonWalletOrder.address,
         });
 
         await checkStage(orderSellTon, seller, request, true);
@@ -425,8 +431,11 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: orderSellTon.address,
-            success: false,
-            exitCode: 42
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: buyJettonWalletOrder.address,
         });
 
         await checkStage(orderSellTon, seller, request, true);
@@ -463,8 +472,11 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: orderSellTon.address,
-            success: false,
-            exitCode: 39
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: buyJettonWalletOrder.address,
         });
 
         await checkStage(orderSellTon, seller, request, true);
