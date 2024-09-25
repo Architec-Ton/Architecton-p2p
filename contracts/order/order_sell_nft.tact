@@ -47,7 +47,7 @@ contract OrderSellNft with OrderBase {
         nativeThrowUnless(invalid_timeout, self.request.timeout > now());
         nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
 
-        send_nft(nft_transfer_fee, self.request.nft_address, notify.sender, self.seller, 0);
+        send_nft(nft_transfer_fee, self.request.nft_address, notify.sender, self.seller, 0, SendIgnoreErrors);
         basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
 
         self.withdraw()
@@ -56,7 +56,7 @@ contract OrderSellNft with OrderBase {
     receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
-        send_nft(nft_transfer_fee, self.request.nft_address, self.seller, self.seller, 0);
+        send_nft(nft_transfer_fee, self.request.nft_address, self.seller, self.seller, 0, SendIgnoreErrors);
 
         self.withdraw()
     }

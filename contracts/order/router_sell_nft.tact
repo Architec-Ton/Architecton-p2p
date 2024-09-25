@@ -19,13 +19,19 @@ contract RouterSellNft with RouterBase {
         let init_nonce = initCell.loadInt(257);
 
         if (context().value < deploy_fee + nft_transfer_fee + self.fee) {
-            send_nft(nft_transfer_fee, context().sender, seller, seller, 0);
+            send_nft(nft_transfer_fee, context().sender, seller, seller, 0, SendRemainingBalance);
 
-            nativeThrow(not_enough_ton);
+            emit(beginCell().storeUint(not_enough_ton, 32).endCell());
         }
 
         let orderInit = initOf OrderSellNft(init_seller, init_nonce);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
+
+        send(SendParameters{
+            to: self.owner,
+            value: self.fee,
+            mode: SendIgnoreErrors | SendPayGasSeparately,
+        });
 
         send(SendParameters{
             to: orderAddress,
@@ -36,7 +42,7 @@ contract RouterSellNft with RouterBase {
             data: orderInit.data
         });
 
-        send_nft(nft_transfer_fee + ton("0.0042"), context().sender, orderAddress, orderAddress, ton("0.0042"));
+        send_nft(nft_transfer_fee + ton("0.0042"), context().sender, orderAddress, orderAddress, ton("0.0042"), SendRemainingBalance);
     }
 
     override get fun calculate_order(seller: Address, nonce: Int): Address {

@@ -21,22 +21,28 @@ contract RouterBuyTon with RouterBase {
         if (context().value < deploy_fee + jetton_transfer_fee + self.fee) {
             basicJettonTransfer(context().sender, seller, notify.amount, 0, SendIgnoreErrors);
 
-            nativeThrow(not_enough_ton);
+            emit(beginCell().storeUint(not_enough_ton, 32).endCell());
         }
 
         let orderInit = initOf OrderBuyTon(init_seller, init_nonce);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
 
         send(SendParameters{
+            to: self.owner,
+            value: self.fee,
+            mode: SendIgnoreErrors | SendPayGasSeparately,
+        });
+
+        send(SendParameters{
             to: orderAddress,
-            value: context().value - self.fee - context().readForwardFee() - jetton_transfer_fee,
-            mode: SendIgnoreErrors,
+            value: deploy_fee,
+            mode: SendIgnoreErrors | SendPayGasSeparately,
             body: requestCell,
             code: orderInit.code,
             data: orderInit.data
         });
 
-        basicJettonTransfer(context().sender, orderAddress, notify.amount, deploy_fee, SendIgnoreErrors);
+        basicJettonTransfer(context().sender, orderAddress, notify.amount, ton("0.005"), SendIgnoreErrors | SendRemainingBalance);
     }
 
     override get fun calculate_order(seller: Address, nonce: Int): Address {

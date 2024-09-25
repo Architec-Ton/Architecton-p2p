@@ -1595,13 +1595,13 @@ describe('Router', () => {
                 destination: router.address,
                 response_destination: router.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.1),
+                forward_ton_amount: toNano(0.12),
                 forward_payload: createOrderBody
             }))
             .endCell();
 
         const sellJettonTransferResult = await seller.send({
-            value: toNano(0.12),
+            value: toNano(0.15),
             to: sellJettonWalletSeller.address,
             sendMode: 2,
             body: sellTransferBody

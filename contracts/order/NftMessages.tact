@@ -14,7 +14,7 @@ message(0x05138d91) NftTransferNotification {
     forward_payload: Slice as remaining;    // optional custom payload
 }
 
-inline fun send_nft(value: Int, nft_address: Address, new_owner: Address, responce: Address, forward_amount: Int) {
+inline fun send_nft(value: Int, nft_address: Address, new_owner: Address, responce: Address, forward_amount: Int, mode: Int) {
     let body = beginCell()
     .storeUint(0x5fcc3d14, 32)
     .storeUint(0, 64)
@@ -28,7 +28,7 @@ inline fun send_nft(value: Int, nft_address: Address, new_owner: Address, respon
     send(SendParameters{
         to: nft_address,
         value: value,
-        mode: SendIgnoreErrors,
+        mode: mode,
         body: body
     })
 }
