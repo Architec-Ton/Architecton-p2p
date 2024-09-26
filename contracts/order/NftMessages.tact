@@ -6,7 +6,7 @@ message Request {
     jetton_buy_master: Address;
     amount_buy: Int as coins;
 
-    timeout: Int as uint64 = 0;
+    expiration_time: Int as uint64 = 0;
 }
 
 message(0x05138d91) NftTransferNotification {

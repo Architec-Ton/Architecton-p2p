@@ -23,17 +23,12 @@ message(0x0f8a7ea5) JettonTransfer {
 // @param amount - amount of sent jettons with decimals
 // @param forward_ton_amount - amount of ton in Jetton Transfer Notification (may be zero)
 // @param mode - mode of transaction
-inline fun basicJettonTransfer(jetton_wallet: Address, destination: Address, amount: Int, forward_ton_amount: Int, mode: Int) {
-    let value = jetton_transfer_fee;
-    if (mode >= 64) {
-        value = 0;
-    }
-
+inline fun basicJettonTransfer(jetton_wallet: Address, destination: Address, amount: Int, forward_ton_amount: Int) {
     send(SendParameters{
         to: jetton_wallet,
-        value: value,
+        value: jetton_transfer_fee,
         bounce: true,
-        mode: mode,
+        mode: SendIgnoreErrors,
         body: JettonTransfer {
             query_id: 0,
             amount: amount,

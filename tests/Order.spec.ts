@@ -5,7 +5,7 @@ import {
     SandboxContract,
     TreasuryContract
 } from '@ton/sandbox';
-import { Address, beginCell, Cell, toNano } from '@ton/core';
+import { Address, beginCell, Cell, fromNano, toNano } from '@ton/core';
 import { Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
@@ -27,7 +27,7 @@ async function checkStage(order: SandboxContract<Order>, seller: SandboxContract
     expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString());
     expect(currentState.request.amount_sell).toEqual(request.amount_sell);
     expect(currentState.request.amount_buy).toEqual(request.amount_buy);
-    expect(currentState.request.timeout).toEqual(request.timeout);
+    expect(currentState.request.expiration_time).toEqual(request.expiration_time);
 }
 
 describe('First stage', () => {
@@ -289,7 +289,7 @@ describe('First stage', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const deployResult = await seller.send(
@@ -887,7 +887,7 @@ describe('Second stage', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         await seller.send(
@@ -1173,7 +1173,7 @@ describe('Second stage', () => {
         await checkStage(order, seller, request, true);
     }, 100000000);
 
-    it('notify from buyJettonWalletOrder -> with the wrong timeout', async () => {
+    it('notify from buyJettonWalletOrder -> with the wrong expiration_time', async () => {
         blockchain.now = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 1000;
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
@@ -1215,7 +1215,7 @@ describe('Second stage', () => {
         await checkStage(order, seller, request, true);
     }, 100000000);
 
-    it('notify from buyJettonWalletOrder -> with the right timeout -> with the wrong amount', async () => {
+    it('notify from buyJettonWalletOrder -> with the right expiration_time -> with the wrong amount', async () => {
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
                 $$type: 'JettonTransfer',
@@ -1515,7 +1515,7 @@ describe('Router', () => {
             body: deployerBuyTransferBody
         });
 
-        router = blockchain.openContract(await Router.fromInit(deployer.address, toNano(0.01), BigInt(Date.now())));
+        router = blockchain.openContract(await Router.fromInit(deployer.address, toNano(0.015), BigInt(Date.now())));
 
         const routerDeployResult = await deployer.send(
             {
@@ -1540,6 +1540,7 @@ describe('Router', () => {
     }, 100000000);
 
     it('main flow', async () => {
+        const startBalance = (await blockchain.getContract(router.address)).balance
         const sellJettonWalletRouter = blockchain.openContract(
             Wallet.createFromConfig({
                     owner_address: router.address, jetton_master_address: sellJettonMaster
@@ -1573,7 +1574,7 @@ describe('Router', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const createOrderBody = beginCell()
@@ -1595,7 +1596,7 @@ describe('Router', () => {
                 destination: router.address,
                 response_destination: router.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.12),
+                forward_ton_amount: toNano(0.13),
                 forward_payload: createOrderBody
             }))
             .endCell();
@@ -1645,6 +1646,7 @@ describe('Router', () => {
             success: true
         });
         printTransactionFees(sellJettonTransferResult.transactions);
+        console.log(fromNano((await blockchain.getContract(router.address)).balance - startBalance))
 
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({

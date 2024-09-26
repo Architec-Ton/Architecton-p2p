@@ -6,7 +6,7 @@ message Request {
     amount_sell: Int as coins;
     amount_buy: Int as coins;
 
-    timeout: Int as uint64 = 0;
+    expiration_time: Int as uint64 = 0;
 }
 
 contract OrderBuyTon with OrderBase {
@@ -20,7 +20,7 @@ contract OrderBuyTon with OrderBase {
         amount_sell: 0,
         amount_buy: 0,
 
-        timeout: 0,
+        expiration_time: 0,
     };
 
     open: Bool = false;
@@ -44,12 +44,12 @@ contract OrderBuyTon with OrderBase {
 
     // @notice Receive Jetton Transfer Notification from seller, validate and set order open
     receive(notify: JettonTransferNotification) {
-        if (!self.SmartThrow(order_not_filled, self.filled, notify.sender, notify.amount)) {return;}
-        if (!self.SmartThrow(access_denided, notify.sender == self.router, notify.sender, notify.amount)) {return;}
-        if (!self.SmartThrow(order_already_opened, !self.open, self.seller, notify.amount)) {return;}
-        if (!self.SmartThrow(invalid_address, context().sender == self.request.order_jetton_sell_wallet, self.seller, notify.amount)) {return;}
-        if (!self.SmartThrow(invalid_timeout, self.request.timeout > now(), self.seller, notify.amount)) {return;}
-        if (!self.SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_sell, self.seller, notify.amount)) {return;}
+        if (!SmartThrow(order_not_filled, self.filled, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(access_denided, notify.sender == self.router, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(order_already_opened, !self.open, self.seller, notify.amount)) {return;}
+        if (!SmartThrow(invalid_address, context().sender == self.request.order_jetton_sell_wallet, self.seller, notify.amount)) {return;}
+        if (!SmartThrow(invalid_expiration_time, self.request.expiration_time > now(), self.seller, notify.amount)) {return;}
+        if (!SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_sell, self.seller, notify.amount)) {return;}
 
         self.open = true;
     }
@@ -76,7 +76,7 @@ contract OrderBuyTon with OrderBase {
             mode: SendIgnoreErrors + SendPayGasSeparately,
         });
 
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, buyer, self.request.amount_sell, 0, SendIgnoreErrors);
+        basicJettonTransfer(self.request.order_jetton_sell_wallet, buyer, self.request.amount_sell, 0);
 
         self.withdraw()
     }
@@ -87,7 +87,7 @@ contract OrderBuyTon with OrderBase {
         nativeThrowUnless(access_denided, context().sender == self.seller);
         nativeThrowUnless(not_enough_ton, myBalance() >= jetton_transfer_fee);
 
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0, SendIgnoreErrors);
+        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0);
 
         self.withdraw()
     }

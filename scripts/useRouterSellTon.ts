@@ -6,7 +6,7 @@ import { OrderSellTon, Request } from '../build/OrderSellTon/tact_OrderSellTon';
 import { storeTonTransferNotification } from '../build/RouterSellTon/tact_RouterSellTon';
 
 export async function run(provider: NetworkProvider) {
-    const routerAddress = Address.parse('kQCszIdtWB_EQUMOLQ5LPPRd-_OhUdD0B3-pd5UfhaeuJ9v3')
+    const routerAddress = Address.parse('kQC2xubcyXl8d5xxOKXaYRJd3xvdibaUZp13o7sSpdZJcgwc')
     if (!await provider.isContractDeployed(routerAddress)) {
         console.log(`Router with address ${routerAddress.toString()} doesn't deployed`)
         return
@@ -18,7 +18,7 @@ export async function run(provider: NetworkProvider) {
     const orderSellTon = await OrderSellTon.fromInit(provider.sender().address!, nonce)
     const buyJettonWallet = await getJettonWallet(buyJettonMaster, orderSellTon.address);
 
-    const timeout = 60 * 60 * 24 * 100;
+    const expiration_time = 60 * 60 * 24 * 100;
 
     const buyDecimals = await getJettonDecimals(buyJettonMaster)
 
@@ -26,13 +26,13 @@ export async function run(provider: NetworkProvider) {
         $$type: 'Request',
         order_jetton_buy_wallet: buyJettonWallet,
         jetton_buy_master: buyJettonMaster,
-        amount_sell: toNano(10n),
+        amount_sell: toNano(1n),
         amount_buy: BigInt(5 * 10 ** buyDecimals),
-        timeout: BigInt(Math.floor(Date.now() / 1000) + timeout)
+        expiration_time: BigInt(Math.floor(Date.now() / 1000) + expiration_time)
     };
 
     await provider.sender().send({
-        value: toNano(0.1) + request.amount_sell,
+        value: toNano(0.039) + request.amount_sell + toNano(0.01),
         to: routerAddress,
         body: beginCell()
             .store(storeTonTransferNotification({

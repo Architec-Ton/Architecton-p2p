@@ -13,7 +13,7 @@ contract OrderSellNft with OrderBase {
         jetton_buy_master: newAddress(0,0),
         amount_buy: 0,
 
-        timeout: 0,
+        expiration_time: 0,
     };
 
     open: Bool = false;
@@ -44,11 +44,11 @@ contract OrderSellNft with OrderBase {
     receive(notify: JettonTransferNotification) {
         nativeThrowUnless(order_not_opened, self.open);
         nativeThrowUnless(invalid_address, context().sender == self.request.order_jetton_buy_wallet);
-        nativeThrowUnless(invalid_timeout, self.request.timeout > now());
+        nativeThrowUnless(invalid_expiration_time, self.request.expiration_time > now());
         nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
 
         send_nft(nft_transfer_fee, self.request.nft_address, notify.sender, self.seller, 0, SendIgnoreErrors);
-        basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
+        basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0);
 
         self.withdraw()
     }

@@ -6,7 +6,7 @@ message Request {
     amount_sell: Int as coins;
     amount_buy: Int as coins;
 
-    timeout: Int as uint64 = 0;
+    expiration_time: Int as uint64 = 0;
 }
 
 contract OrderSellTon with OrderBase {
@@ -20,7 +20,7 @@ contract OrderSellTon with OrderBase {
         amount_sell: 0,
         amount_buy: 0,
 
-        timeout: 0,
+        expiration_time: 0,
     };
 
     open: Bool = false;
@@ -45,13 +45,13 @@ contract OrderSellTon with OrderBase {
 
     // @notice Receive Jetton Transfer Notification from anyone, validate and send ton and jetton to seller and buyer
     receive(notify: JettonTransferNotification) {
-        if (!self.SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
-        if (!self.SmartThrow(invalid_address, context().sender == self.request.order_jetton_buy_wallet, notify.sender, notify.amount)) {return;}
-        if (!self.SmartThrow(invalid_timeout, self.request.timeout > now(), notify.sender, notify.amount)) {return;}
-        if (!self.SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_buy, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_address, context().sender == self.request.order_jetton_buy_wallet, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_expiration_time, self.request.expiration_time > now(), notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_buy, notify.sender, notify.amount)) {return;}
         let buyer: Address = notify.sender;
 
-        basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
+        basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0);
 
         send(SendParameters{
             to: buyer,

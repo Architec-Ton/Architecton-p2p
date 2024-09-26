@@ -5,7 +5,7 @@ import { getJettonDecimals, getJettonWallet, storeJettonTransfer } from './jetto
 import { OrderBuyTon, Request, storeRequest  } from '../build/OrderBuyTon/tact_OrderBuyTon';
 
 export async function run(provider: NetworkProvider) {
-    const routerAddress = Address.parse('kQALn75zX71ojoGyH1ogO55DcWe5BAkxRUwgAe-CJg_49RAm')
+    const routerAddress = Address.parse('kQDkdCe3ps9EGZ2yUlFpplL3NMUQBXBhfBSP-k6o4mojeriq')
     if (!await provider.isContractDeployed(routerAddress)) {
         console.log(`Router with address ${routerAddress.toString()} doesn't deployed`)
         return
@@ -19,7 +19,7 @@ export async function run(provider: NetworkProvider) {
     const sellJettonWallet = await getJettonWallet(sellJettonMaster, order.address);
     const jettonWallet = await getJettonWallet(sellJettonMaster, provider.sender().address!);
 
-    const timeout = 60 * 60 * 24 * 100;
+    const expiration_time = 60 * 60 * 24 * 100;
 
     const sellDecimals = await getJettonDecimals(sellJettonMaster)
 
@@ -29,7 +29,7 @@ export async function run(provider: NetworkProvider) {
         jetton_sell_master: sellJettonMaster,
         amount_sell: BigInt(2 * 10 ** sellDecimals),
         amount_buy: toNano(1),
-        timeout: BigInt(Math.floor(Date.now() / 1000) + timeout)
+        expiration_time: BigInt(Math.floor(Date.now() / 1000) + expiration_time)
     };
 
     const createOrderBody = beginCell()
@@ -43,6 +43,8 @@ export async function run(provider: NetworkProvider) {
         .endCell()
         .asSlice();
 
+    const value = toNano(0.115) + toNano(0.01) //toNano(0.01) + toNano(0.04) + toNano(0.01) + toNano(0.01) + toNano(0.007)
+    const gas = toNano(0.039325279)
     const sellTransferBody = beginCell()
         .store(storeJettonTransfer({
             $$type: 'JettonTransfer',
@@ -51,13 +53,13 @@ export async function run(provider: NetworkProvider) {
             destination: routerAddress,
             response_destination: routerAddress,
             custom_payload: beginCell().endCell(),
-            forward_ton_amount: toNano(0.08),
+            forward_ton_amount: value - gas,
             forward_payload: createOrderBody
         }))
         .endCell();
 
     await provider.sender().send({
-        value: toNano(0.15),
+        value: value,
         to: jettonWallet,
         body: sellTransferBody
     });

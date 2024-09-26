@@ -19,7 +19,7 @@ async function checkStage(orderBuyTon: SandboxContract<OrderBuyTon>, seller: San
     expect(currentState.request.jetton_sell_master.toString()).toEqual(request.jetton_sell_master.toString());
     expect(currentState.request.amount_sell).toEqual(request.amount_sell);
     expect(currentState.request.amount_buy).toEqual(request.amount_buy);
-    expect(currentState.request.timeout).toEqual(request.timeout);
+    expect(currentState.request.expiration_time).toEqual(request.expiration_time);
 }
 
 describe('First stage', () => {
@@ -166,7 +166,7 @@ describe('First stage', () => {
             jetton_sell_master: sellMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const deployResult = await seller.send(
@@ -631,7 +631,7 @@ describe('Second stage', () => {
             jetton_sell_master: sellMinter.address,
             amount_sell: 10n,
             amount_buy: toNano(5n),
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         await seller.send(
@@ -1001,7 +1001,7 @@ describe('Router', () => {
             jetton_sell_master: sellMinter.address,
             amount_sell: 10n,
             amount_buy: toNano(5n),
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const createOrderBody = beginCell()

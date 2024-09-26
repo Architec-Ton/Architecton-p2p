@@ -25,8 +25,8 @@ contract RouterSellTon with RouterBase {
 
         send(SendParameters{
             to: orderAddress,
-            value: deploy_fee,
-            mode: SendIgnoreErrors | SendRemainingBalance,
+            value: context().value - self.fee - ton("0.01"),
+            mode: SendIgnoreErrors,
             body: notify.request.toCell(),
             code: orderInit.code,
             data: orderInit.data

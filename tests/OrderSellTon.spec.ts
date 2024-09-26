@@ -19,7 +19,7 @@ async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxC
     expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString());
     expect(currentState.request.amount_sell).toEqual(request.amount_sell);
     expect(currentState.request.amount_buy).toEqual(request.amount_buy);
-    expect(currentState.request.timeout).toEqual(request.timeout);
+    expect(currentState.request.expiration_time).toEqual(request.expiration_time);
 }
 
 describe('Second stage', () => {
@@ -168,7 +168,7 @@ describe('Second stage', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: toNano(10n),
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const deployResult = await seller.send(
@@ -399,7 +399,7 @@ describe('Second stage', () => {
         await checkStage(orderSellTon, seller, request, true);
     }, 100000000);
 
-    it('notify from buyJettonWalletOrder -> with the wrong timeout', async () => {
+    it('notify from buyJettonWalletOrder -> with the wrong expiration_time', async () => {
         blockchain.now = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 1000;
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
@@ -441,7 +441,7 @@ describe('Second stage', () => {
         await checkStage(orderSellTon, seller, request, true);
     }, 100000000);
 
-    it('notify from buyJettonWalletOrder -> with the right timeout -> with the wrong amount', async () => {
+    it('notify from buyJettonWalletOrder -> with the right expiration_time -> with the wrong amount', async () => {
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
                 $$type: 'JettonTransfer',
@@ -720,7 +720,7 @@ describe('Router', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: toNano(10),
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const tonTransferBody: TonTransferNotification = {
