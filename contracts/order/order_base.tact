@@ -19,6 +19,7 @@ trait OrderBase {
 
     open: Bool;
 
+    // @notice Send all balance to owner and annihilate contract from blockchain
     fun withdraw() {
         send(SendParameters{
             to: self.seller,
@@ -27,6 +28,11 @@ trait OrderBase {
         });
     }
 
+    // @notice Check that condition is true, else if incoming value is enought - withdraw jettons
+    // @param code - code of the error being checking
+    // @param condition - result of checking condition
+    // @param to - withdraw destination of jettons
+    // @param amount - withdraw amount of jettons
     fun SmartThrow(code: Int, condition: Bool, to: Address, amount: Int): Bool {
         if (!condition) {
             if (context().value >= jetton_transfer_fee) {
@@ -41,6 +47,7 @@ trait OrderBase {
         return condition;
     }
 
+    // @notice return self params of Order contract
     get fun state(): State {
         return State {
             type: self.type,

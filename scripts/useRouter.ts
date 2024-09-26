@@ -5,7 +5,7 @@ import { masters } from './imports/consts';
 import { getJettonDecimals, getJettonWallet, storeJettonTransfer } from './jetton-helpers';
 
 export async function run(provider: NetworkProvider) {
-    const routerAddress = Address.parse('kQC0OSiLe0H_wvfaIE6rSrjbAk81Hk3wknkudojWprNFxZoc')
+    const routerAddress = Address.parse('kQD_1QzHG9iFRmy4v4bFyFxcIckdyuJBFMFJNyWg7S6Hfcj7')
     if (!await provider.isContractDeployed(routerAddress)) {
         console.log(`Router with address ${routerAddress.toString()} doesn't deployed`)
         return
@@ -56,13 +56,13 @@ export async function run(provider: NetworkProvider) {
             destination: routerAddress,
             response_destination: routerAddress,
             custom_payload: beginCell().endCell(),
-            forward_ton_amount: toNano(0.105),
+            forward_ton_amount: toNano(0.07),
             forward_payload: createOrderBody
         }))
         .endCell();
-
+    const excess = toNano(0.0106747211)
     await provider.sender().send({
-        value: toNano(0.145),
+        value: toNano(0.11) - excess + toNano(0.01),
         to: jettonWallet,
         body: sellTransferBody
     });

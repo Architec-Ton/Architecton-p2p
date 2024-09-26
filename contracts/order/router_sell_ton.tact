@@ -16,6 +16,7 @@ contract RouterSellTon with RouterBase {
         self.fee = fee;
     }
 
+    // @notice Receive Ton Transfer Notification message, validate and send fees, and deploy (with seller toncoins)
     receive (notify: TonTransferNotification) {
         let seller = context().sender;
 

@@ -30,6 +30,8 @@ contract OrderSellTon with OrderBase {
         self.seller = seller;
     }
 
+    // @notice Receive request message, validate and set request data
+    // @param request - request message with necessary params
     receive(request: Request) {
         let ctx = context();
         nativeThrowUnless(access_denided, ctx.sender == self.router);
@@ -41,6 +43,7 @@ contract OrderSellTon with OrderBase {
         self.open = true;
     }
 
+    // @notice Receive Jetton Transfer Notification from anyone, validate and send ton and jetton to seller and buyer
     receive(notify: JettonTransferNotification) {
         if (!self.SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
         if (!self.SmartThrow(invalid_address, context().sender == self.request.order_jetton_buy_wallet, notify.sender, notify.amount)) {return;}
@@ -60,6 +63,7 @@ contract OrderSellTon with OrderBase {
         self.withdraw()
     }
 
+    // @notice Receive cancel message, validate and send jettons and withdraw to seller
     receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);

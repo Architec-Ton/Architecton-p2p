@@ -10,6 +10,7 @@ contract Router with RouterBase {
         self.fee = fee;
     }
 
+    // @notice Receive Jetton Transfer Notification message, validate and send fees, deploy and jettons
     receive(notify: JettonTransferNotification) {
         let seller = notify.sender;
         let forward_payload = notify.forward_payload;
@@ -18,7 +19,7 @@ contract Router with RouterBase {
         let init_seller = initCell.loadAddress();
         let init_nonce = initCell.loadInt(257);
 
-        if (context().value / 2 < deploy_fee + jetton_transfer_fee + self.fee) {
+        if (context().value < deploy_fee * 2 + jetton_transfer_fee + self.fee) {
             basicJettonTransfer(context().sender, seller, notify.amount, 0, SendIgnoreErrors | SendRemainingBalance);
 
             emit(beginCell().storeUint(not_enough_ton, 32).endCell());
