@@ -1,5 +1,11 @@
-import { Blockchain, printTransactionFees, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { Address, beginCell, Cell, toNano } from '@ton/core';
+import {
+    Blockchain,
+    prettyLogTransactions,
+    printTransactionFees,
+    SandboxContract,
+    TreasuryContract
+} from '@ton/sandbox';
+import { Address, beginCell, Cell, fromNano, toNano } from '@ton/core';
 import { Order, Request, storeJettonTransferNotification, storeRequest } from '../wrappers/Order';
 import '@ton/test-utils';
 import { Wallet } from '../wrappers/jetton-wallet';
@@ -12,6 +18,7 @@ import { Router } from '../wrappers/Router';
 async function checkStage(order: SandboxContract<Order>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
     expect(currentState.open).toEqual(open);
+    expect(currentState.type).toEqual(0n)
 
     expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_sell_wallet.toString()).toEqual(request.order_jetton_sell_wallet.toString());
@@ -20,7 +27,7 @@ async function checkStage(order: SandboxContract<Order>, seller: SandboxContract
     expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString());
     expect(currentState.request.amount_sell).toEqual(request.amount_sell);
     expect(currentState.request.amount_buy).toEqual(request.amount_buy);
-    expect(currentState.request.timeout).toEqual(request.timeout);
+    expect(currentState.request.expiration_time).toEqual(request.expiration_time);
 }
 
 describe('First stage', () => {
@@ -282,7 +289,7 @@ describe('First stage', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const deployResult = await seller.send(
@@ -379,8 +386,6 @@ describe('First stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: seller.address,
             to: order.address,
-            success: false,
-            exitCode: 136
         });
 
         await checkStage(order, seller, request, false);
@@ -455,7 +460,7 @@ describe('First stage', () => {
                 destination: order.address,
                 response_destination: order.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.1),
+                forward_ton_amount: toNano(0.5),
                 forward_payload: beginCell().endCell().asSlice()
             }))
             .endCell();
@@ -477,8 +482,12 @@ describe('First stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: errJettonWalletOrder.address,
             to: order.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: errJettonWalletOrder.address,
+            success: true,
         });
 
         await checkStage(order, seller, request, false);
@@ -493,7 +502,7 @@ describe('First stage', () => {
                 destination: order.address,
                 response_destination: order.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.1),
+                forward_ton_amount: toNano(0.5),
                 forward_payload: beginCell().endCell().asSlice()
             }))
             .endCell();
@@ -515,8 +524,12 @@ describe('First stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: order.address,
-            success: false,
-            exitCode: 40
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: buyJettonWalletOrder.address,
+            success: true,
         });
 
         await checkStage(order, seller, request, false);
@@ -553,8 +566,12 @@ describe('First stage', () => {
         expect(sellJettonTransferResult.transactions).toHaveTransaction({
             from: sellJettonWalletOrder.address,
             to: order.address,
-            success: false,
-            exitCode: 132
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: sellJettonWalletOrder.address,
+            success: true,
         });
 
         await checkStage(order, seller, request, false);
@@ -591,9 +608,12 @@ describe('First stage', () => {
         expect(sellJettonTransferResult.transactions).toHaveTransaction({
             from: sellJettonWalletOrder.address,
             to: order.address,
-            success: false,
-            exitCode: 39
         });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: sellJettonWalletOrder.address,
+        })
 
         await checkStage(order, seller, request, false);
     }, 100000000);
@@ -867,7 +887,7 @@ describe('Second stage', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         await seller.send(
@@ -1002,8 +1022,11 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: seller.address,
             to: order.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: seller.address,
         });
 
         await checkStage(order, seller, request, true);
@@ -1100,8 +1123,11 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: errJettonWalletOrder.address,
             to: order.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: errJettonWalletOrder.address,
         });
 
         await checkStage(order, seller, request, true);
@@ -1137,14 +1163,17 @@ describe('Second stage', () => {
         expect(sellJettonTransferResult.transactions).toHaveTransaction({
             from: sellJettonWalletOrder.address,
             to: order.address,
-            success: false,
-            exitCode: 41
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: sellJettonWalletOrder.address,
         });
 
         await checkStage(order, seller, request, true);
     }, 100000000);
 
-    it('notify from buyJettonWalletOrder -> with the wrong timeout', async () => {
+    it('notify from buyJettonWalletOrder -> with the wrong expiration_time', async () => {
         blockchain.now = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 1000;
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
@@ -1176,14 +1205,17 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: order.address,
-            success: false,
-            exitCode: 42
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: buyJettonWalletOrder.address,
         });
 
         await checkStage(order, seller, request, true);
     }, 100000000);
 
-    it('notify from buyJettonWalletOrder -> with the right timeout -> with the wrong amount', async () => {
+    it('notify from buyJettonWalletOrder -> with the right expiration_time -> with the wrong amount', async () => {
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
                 $$type: 'JettonTransfer',
@@ -1214,8 +1246,11 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: order.address,
-            success: false,
-            exitCode: 39
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: order.address,
+            to: buyJettonWalletOrder.address,
         });
 
         await checkStage(order, seller, request, true);
@@ -1480,7 +1515,7 @@ describe('Router', () => {
             body: deployerBuyTransferBody
         });
 
-        router = blockchain.openContract(await Router.fromInit(deployer.address, toNano(0.01), BigInt(Date.now())));
+        router = blockchain.openContract(await Router.fromInit(deployer.address, toNano(0.015), BigInt(Date.now())));
 
         const routerDeployResult = await deployer.send(
             {
@@ -1505,6 +1540,7 @@ describe('Router', () => {
     }, 100000000);
 
     it('main flow', async () => {
+        const startBalance = (await blockchain.getContract(router.address)).balance
         const sellJettonWalletRouter = blockchain.openContract(
             Wallet.createFromConfig({
                     owner_address: router.address, jetton_master_address: sellJettonMaster
@@ -1538,7 +1574,7 @@ describe('Router', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: 10n,
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const createOrderBody = beginCell()
@@ -1560,13 +1596,13 @@ describe('Router', () => {
                 destination: router.address,
                 response_destination: router.address,
                 custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.08),
+                forward_ton_amount: toNano(0.13),
                 forward_payload: createOrderBody
             }))
             .endCell();
 
         const sellJettonTransferResult = await seller.send({
-            value: toNano(0.1),
+            value: toNano(0.15),
             to: sellJettonWalletSeller.address,
             sendMode: 2,
             body: sellTransferBody
@@ -1610,6 +1646,7 @@ describe('Router', () => {
             success: true
         });
         printTransactionFees(sellJettonTransferResult.transactions);
+        console.log(fromNano((await blockchain.getContract(router.address)).balance - startBalance))
 
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
@@ -1672,5 +1709,16 @@ describe('Router', () => {
         expect(buyJettonBuyerBalance).toEqual(9999999995n);
         expect(sellJettonOrderBalance).toEqual(0n);
         expect(buyJettonOrderBalance).toEqual(0n);
+
+        const deployerBalanceBefore = await deployer.getBalance()
+        const a = await router.send(
+            deployer.getSender(),
+            {
+                value: toNano(0.01)
+            },
+            {
+                $$type: 'Withdraw'
+            }
+        )
     }, 100000000);
 });

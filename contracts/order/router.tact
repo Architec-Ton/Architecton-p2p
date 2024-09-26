@@ -10,6 +10,7 @@ contract Router with RouterBase {
         self.fee = fee;
     }
 
+    // @notice Receive Jetton Transfer Notification message, validate and send deploy and jettons
     receive(notify: JettonTransferNotification) {
         let seller = notify.sender;
         let forward_payload = notify.forward_payload;
@@ -18,31 +19,22 @@ contract Router with RouterBase {
         let init_seller = initCell.loadAddress();
         let init_nonce = initCell.loadInt(257);
 
-        if (context().value < deploy_fee + jetton_transfer_fee + self.fee) {
-            basicJettonTransfer(context().sender, seller, notify.amount, 0, SendIgnoreErrors | SendRemainingBalance);
-
-            nativeThrow(not_enough_ton);
-        }
+        let expectedValue = deploy_fee + jetton_transfer_fee + self.fee + ton("0.01");
+        if(!SmartThrow(not_enough_ton, context().value > expectedValue, seller, notify.amount)){return;}
 
         let orderInit = initOf Order(init_seller, init_nonce);
-        let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
-
-        send(SendParameters{
-            to: self.owner,
-            value: self.fee,
-            mode: SendIgnoreErrors | SendPayGasSeparately,
-        });
+        let orderAddress = self.calculate_order(init_seller, init_nonce);
 
         send(SendParameters{
             to: orderAddress,
-            value: deploy_fee,
-            mode: SendIgnoreErrors | SendPayGasSeparately,
+            value: context().value - (jetton_transfer_fee + self.fee + ton("0.01")),
+            mode: SendIgnoreErrors,
             body: requestCell,
             code: orderInit.code,
             data: orderInit.data
         });
 
-        basicJettonTransfer(context().sender, orderAddress, notify.amount, ton("0.01"), SendIgnoreErrors | SendRemainingBalance);
+        basicJettonTransfer(context().sender, orderAddress, notify.amount, ton("0.006"));
     }
 
     override get fun calculate_order(seller: Address, nonce: Int): Address {

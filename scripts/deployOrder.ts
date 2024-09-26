@@ -13,7 +13,7 @@ export async function run(provider: NetworkProvider) {
     const sellJettonWallet = await getJettonWallet(sellJettonMaster, order.address);
     const buyJettonWallet = await getJettonWallet(buyJettonMaster, order.address);
 
-    const timeout = 60 * 60 * 24 * 100;
+    const expiration_time = 60 * 60 * 24 * 100;
 
     const sellDecimals = await getJettonDecimals(sellJettonMaster)
     const buyDecimals = await getJettonDecimals(buyJettonMaster)
@@ -26,7 +26,7 @@ export async function run(provider: NetworkProvider) {
         jetton_buy_master: buyJettonMaster,
         amount_sell: BigInt(5 * 10 ** sellDecimals),
         amount_buy: BigInt(600 * 10 ** buyDecimals),
-        timeout: BigInt(Math.floor(Date.now() / 1000) + timeout)
+        expiration_time: BigInt(Math.floor(Date.now() / 1000) + expiration_time)
     };
 
     await provider.sender().send({

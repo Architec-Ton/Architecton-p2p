@@ -12,13 +12,14 @@ import { OrderSellTon, Request, storeJettonTransferNotification, storeRequest } 
 async function checkStage(order: SandboxContract<OrderSellTon>, seller: SandboxContract<TreasuryContract>, request: Request, open: boolean) {
     const currentState = await order.getState();
     expect(currentState.open).toEqual(open);
+    expect(currentState.type).toEqual(2n)
 
     expect(currentState.seller.toString()).toEqual(seller.address.toString());
     expect(currentState.request.order_jetton_buy_wallet.toString()).toEqual(request.order_jetton_buy_wallet.toString());
     expect(currentState.request.jetton_buy_master.toString()).toEqual(request.jetton_buy_master.toString());
     expect(currentState.request.amount_sell).toEqual(request.amount_sell);
     expect(currentState.request.amount_buy).toEqual(request.amount_buy);
-    expect(currentState.request.timeout).toEqual(request.timeout);
+    expect(currentState.request.expiration_time).toEqual(request.expiration_time);
 }
 
 describe('Second stage', () => {
@@ -167,7 +168,7 @@ describe('Second stage', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: toNano(10n),
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const deployResult = await seller.send(
@@ -287,8 +288,11 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: seller.address,
             to: orderSellTon.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: seller.address,
         });
 
         await checkStage(orderSellTon, seller, request, true);
@@ -385,14 +389,17 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: errJettonWalletOrder.address,
             to: orderSellTon.address,
-            success: false,
-            exitCode: 136
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: errJettonWalletOrder.address,
         });
 
         await checkStage(orderSellTon, seller, request, true);
     }, 100000000);
 
-    it('notify from buyJettonWalletOrder -> with the wrong timeout', async () => {
+    it('notify from buyJettonWalletOrder -> with the wrong expiration_time', async () => {
         blockchain.now = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 1000;
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
@@ -424,14 +431,17 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: orderSellTon.address,
-            success: false,
-            exitCode: 42
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: buyJettonWalletOrder.address,
         });
 
         await checkStage(orderSellTon, seller, request, true);
     }, 100000000);
 
-    it('notify from buyJettonWalletOrder -> with the right timeout -> with the wrong amount', async () => {
+    it('notify from buyJettonWalletOrder -> with the right expiration_time -> with the wrong amount', async () => {
         const buyTransferBody = beginCell()
             .store(storeJettonTransfer({
                 $$type: 'JettonTransfer',
@@ -462,8 +472,11 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: orderSellTon.address,
-            success: false,
-            exitCode: 39
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellTon.address,
+            to: buyJettonWalletOrder.address,
         });
 
         await checkStage(orderSellTon, seller, request, true);
@@ -707,7 +720,7 @@ describe('Router', () => {
             jetton_buy_master: buyMinter.address,
             amount_sell: toNano(10),
             amount_buy: 5n,
-            timeout: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
+            expiration_time: BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 100)
         };
 
         const tonTransferBody: TonTransferNotification = {

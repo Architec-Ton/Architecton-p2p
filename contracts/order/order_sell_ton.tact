@@ -6,12 +6,13 @@ message Request {
     amount_sell: Int as coins;
     amount_buy: Int as coins;
 
-    timeout: Int;
+    expiration_time: Int as uint64 = 0;
 }
 
 contract OrderSellTon with OrderBase {
     seller: Address;
     router: Address;
+    type: Int as uint8 = 2;
 
     request: Request = Request {
         order_jetton_buy_wallet: newAddress(0,0),
@@ -19,7 +20,7 @@ contract OrderSellTon with OrderBase {
         amount_sell: 0,
         amount_buy: 0,
 
-        timeout: 0,
+        expiration_time: 0,
     };
 
     open: Bool = false;
@@ -29,6 +30,8 @@ contract OrderSellTon with OrderBase {
         self.seller = seller;
     }
 
+    // @notice Receive request message, validate and set request data
+    // @param request - request message with necessary params
     receive(request: Request) {
         let ctx = context();
         nativeThrowUnless(access_denided, ctx.sender == self.router);
@@ -40,15 +43,15 @@ contract OrderSellTon with OrderBase {
         self.open = true;
     }
 
+    // @notice Receive Jetton Transfer Notification from anyone, validate and send ton and jetton to seller and buyer
     receive(notify: JettonTransferNotification) {
-        nativeThrowUnless(order_not_opened, self.open);
-        nativeThrowUnless(invalid_address, context().sender == self.request.order_jetton_buy_wallet);
-        nativeThrowUnless(invalid_timeout, self.request.timeout > now());
-        nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
-
+        if (!SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_address, context().sender == self.request.order_jetton_buy_wallet, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_expiration_time, self.request.expiration_time > now(), notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_buy, notify.sender, notify.amount)) {return;}
         let buyer: Address = notify.sender;
 
-        basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0, SendIgnoreErrors);
+        basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0);
 
         send(SendParameters{
             to: buyer,
@@ -60,9 +63,11 @@ contract OrderSellTon with OrderBase {
         self.withdraw()
     }
 
+    // @notice Receive cancel message, validate and send jettons and withdraw to seller
     receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
+        nativeThrowUnless(not_enough_ton, myBalance() >= jetton_transfer_fee);
 
         self.withdraw()
     }
