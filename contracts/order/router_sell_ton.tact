@@ -16,7 +16,7 @@ contract RouterSellTon with RouterBase {
         self.fee = fee;
     }
 
-    // @notice Receive Ton Transfer Notification message, validate and send fees, and deploy (with seller toncoins)
+    // @notice Receive Ton Transfer Notification message, validate and send deploy (with seller toncoins)
     receive (notify: TonTransferNotification) {
         let seller = context().sender;
 
@@ -24,14 +24,8 @@ contract RouterSellTon with RouterBase {
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
 
         send(SendParameters{
-            to: self.owner,
-            value: self.fee,
-            mode: SendIgnoreErrors | SendPayGasSeparately,
-        });
-
-        send(SendParameters{
             to: orderAddress,
-            value: 0,
+            value: deploy_fee,
             mode: SendIgnoreErrors | SendRemainingBalance,
             body: notify.request.toCell(),
             code: orderInit.code,
