@@ -24,13 +24,13 @@ export async function run(provider: NetworkProvider) {
             destination: orderAddress,
             response_destination: orderAddress,
             custom_payload: beginCell().endCell(),
-            forward_ton_amount: toNano(0.065) - gas,
+            forward_ton_amount: toNano(0.125) - gas,
             forward_payload: beginCell().endCell().asSlice(),
         }))
         .endCell()
 
     await provider.sender().send({
-            value: toNano(0.065), // toNano(0.065) 0.071
+            value: toNano(0.125),
             to: jettonWallet,
             body: transferBody,
         }

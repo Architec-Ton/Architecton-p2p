@@ -54,7 +54,7 @@ contract Router with RouterBase {
 
         send(SendParameters{
             to: orderAddress,
-            value: context().value - (jetton_transfer_fee + self.fee + ton("0.01")),
+            value: context().value - expectedValue,
             mode: SendIgnoreErrors,
             body: request.toCell(),
             code: orderInit.code,

@@ -43,7 +43,7 @@ export async function run(provider: NetworkProvider) {
         .endCell()
         .asSlice();
 
-    const value = toNano(0.115) + toNano(0.01) //toNano(0.01) + toNano(0.04) + toNano(0.01) + toNano(0.01) + toNano(0.007)
+    const value = toNano(0.125) + toNano(0.01)
     const gas = toNano(0.039325279)
     const sellTransferBody = beginCell()
         .store(storeJettonTransfer({
