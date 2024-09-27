@@ -1519,7 +1519,7 @@ describe('Router', () => {
 
         const routerDeployResult = await deployer.send(
             {
-                value: toNano(0.02),
+                value: toNano(0.1),
                 to: router.address,
                 sendMode: 2,
                 init: router.init
@@ -1710,8 +1710,7 @@ describe('Router', () => {
         expect(sellJettonOrderBalance).toEqual(0n);
         expect(buyJettonOrderBalance).toEqual(0n);
 
-        const deployerBalanceBefore = await deployer.getBalance()
-        const a = await router.send(
+        await router.send(
             deployer.getSender(),
             {
                 value: toNano(0.01)

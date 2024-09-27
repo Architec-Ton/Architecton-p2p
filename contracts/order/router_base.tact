@@ -8,11 +8,16 @@ message NewFee {
     new_fee: Int;
 }
 
+message Start {}
+
+message Stop {}
+
 message Withdraw {}
 
 trait RouterBase {
     owner: Address;
     fee: Int;
+    status: Bool;
 
     // receive empty message
     receive() {}
@@ -31,6 +36,19 @@ trait RouterBase {
         self.fee = msg.new_fee;
     }
 
+    // start/stop
+    // @notice Receive Strart message, validate and set status: true
+    receive(start: Start) {
+        nativeThrowUnless(access_denided, self.owner == context().sender);
+        self.status = true;
+    }
+
+    // @notice Receive Stop message, validate and set status: false
+    receive(stop: Stop) {
+        nativeThrowUnless(access_denided, self.owner == context().sender);
+        self.status = false;
+    }
+
     // @notice Receive Withdraw message, validate and withdraw all saved balance
     receive(msg: Withdraw) {
         nativeThrowUnless(access_denided, self.owner == context().sender);
@@ -47,6 +65,10 @@ trait RouterBase {
 
     get fun fee(): Int {
         return self.fee
+    }
+
+    get fun status(): Bool {
+        return self.status
     }
 
     // @notice Getter for calculating corresponding order address

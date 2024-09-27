@@ -58,12 +58,12 @@ contract OrderBuyTon with OrderBase {
     receive("transfer ton") {
         let ctx = context();
 
-        if (!self.open || ctx.value < self.request.amount_buy) {
+        if (!self.open || myBalance() < self.request.amount_buy + jetton_transfer_fee + ton("0.01")) {
             send(SendParameters{
                 to: context().sender,
-                value: ctx.value - ctx.readForwardFee(),
+                value: ctx.value - ctx.readForwardFee() - ton("0.01"),
                 bounce: true,
-                mode: SendIgnoreErrors + SendPayGasSeparately,
+                mode: SendIgnoreErrors,
             });
             return;
         }

@@ -45,6 +45,7 @@ contract OrderSellTon with OrderBase {
 
     // @notice Receive Jetton Transfer Notification from anyone, validate and send ton and jetton to seller and buyer
     receive(notify: JettonTransferNotification) {
+        if (!SmartThrow(not_enough_ton, myBalance() > jetton_transfer_fee + ton("0.01"), notify.sender, notify.amount)) {return;}
         if (!SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
         if (!SmartThrow(invalid_address, context().sender == self.request.order_jetton_buy_wallet, notify.sender, notify.amount)) {return;}
         if (!SmartThrow(invalid_expiration_time, self.request.expiration_time > now(), notify.sender, notify.amount)) {return;}

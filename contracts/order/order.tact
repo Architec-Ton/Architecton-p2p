@@ -62,6 +62,7 @@ contract Order with OrderBase {
 
         // send jettons if transfer from anybody
         else if (sender == self.request.order_jetton_buy_wallet) {
+            if(!SmartThrow(not_enough_ton, myBalance() > jetton_transfer_fee * 2 + ton("0.01"), notify.sender, notify.amount)) {return;}
             if(!SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
             if(!SmartThrow(invalid_expiration_time, self.request.expiration_time > now(), notify.sender, notify.amount)) {return;}
             if(!SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_buy, notify.sender, notify.amount)) {return;}

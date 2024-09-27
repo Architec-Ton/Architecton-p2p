@@ -4,6 +4,7 @@ import "./router_base";
 contract RouterBuyTon with RouterBase {
     owner: Address;
     fee: Int;
+    status: Bool = true;
 
     init(owner: Address, fee: Int, time: Int) {
         self.owner = owner;
@@ -13,8 +14,23 @@ contract RouterBuyTon with RouterBase {
     // @notice Receive Jetton Transfer Notification message, validate and send deploy and jettons
     receive(notify: JettonTransferNotification) {
         let seller = notify.sender;
+
+        if(!SmartThrow(router_not_open, self.status, seller, notify.amount)){return;}
+
         let forward_payload = notify.forward_payload;
-        let requestCell = forward_payload.loadRef();
+        let requestCell = forward_payload.loadRef().beginParse();
+        if (!SmartThrow(invalid_op, requestCell.loadUint(32) == 4288332758, seller, notify.amount)){return;}
+
+        let request = Request{
+            order_jetton_sell_wallet: requestCell.loadAddress(),
+            jetton_sell_master: requestCell.loadAddress(),
+            amount_sell: requestCell.loadCoins(),
+            amount_buy: requestCell.loadCoins(),
+
+            expiration_time: requestCell.loadUint(64)
+        };
+        if (!SmartThrow(invalid_expiration_time, request.expiration_time > now(), seller, notify.amount)){return;}
+
         let initCell = forward_payload.loadRef().beginParse();
         let init_seller = initCell.loadAddress();
         let init_nonce = initCell.loadInt(257);
@@ -30,7 +46,7 @@ contract RouterBuyTon with RouterBase {
             to: orderAddress,
             value: context().value - expectedValue,
             mode: SendIgnoreErrors,
-            body: requestCell,
+            body: request.toCell(),
             code: orderInit.code,
             data: orderInit.data
         });
