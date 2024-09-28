@@ -51,7 +51,7 @@ contract RouterBuyTon with RouterBase {
             data: orderInit.data
         });
 
-        basicJettonTransfer(context().sender, orderAddress, notify.amount, ton("0.006"));
+        basicJettonTransfer(context().sender, orderAddress, notify.amount, ton("0.01"));
     }
 
     override get fun calculate_order(seller: Address, nonce: Int): Address {

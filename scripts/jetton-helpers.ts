@@ -120,41 +120,18 @@ export async function getJettonDecimals(jettonMaster: Address) {
     const jetton_content = stack.readCell()
     const jetton_wallet_code = stack.readCell()
 
-    const getKeys = async () => {
-        const metadataKeys = new Map<bigint, string>()
-        const metadata = ['name', 'description', 'symbol', 'image_data', 'decimals'];
-
-        for (let i of metadata) {
-            const sha256View = await sha256(i)
-            let b = 0n, c = 1n << 248n
-            for (let byte of sha256View) {
-                b += BigInt(byte) * c
-                c /= 256n
-            }
-            metadataKeys.set(b, i)
-        }
-
-        return metadataKeys;
+    const sha256View = await sha256('decimals')
+    let b = 0n, c = 1n << 248n
+    for (let byte of sha256View) {
+        b += BigInt(byte) * c
+        c /= 256n
     }
 
     const hasMap = parseDict(jetton_content.refs[0].beginParse(), 256, (src) => src)
-    const deserializeHashMap = new Map<string, string>()
-    const metadataKeys = await getKeys()
 
-    for (let [intKey, stringKey] of metadataKeys) {
-        const value = hasMap.get(intKey)!.loadStringTail().split('\x00')[1]
-        deserializeHashMap.set(stringKey, value)
-    }
+    const value = hasMap.get(b)!.loadStringTail().split('\x00')[1]
 
-    const jettonContent = {
-        name: deserializeHashMap.get('name'),
-        description: deserializeHashMap.get('description'),
-        symbol: deserializeHashMap.get('symbol'),
-        image_data: deserializeHashMap.get('image_data'),
-        decimals: deserializeHashMap.get('decimals')
-    }
-
-    return Number(jettonContent.decimals!)
+    return Number(value)
 }
 
 export async function getOrder(jettonMaster: Address, owner: Address) {

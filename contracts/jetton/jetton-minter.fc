@@ -277,7 +277,7 @@ cell build_content_cell(slice metadata_uri) inline {
         total_supply,                                   ;; total_supply
         TRUE,                                           ;; mintable
         admin_address,                                  ;; admin_address
-        build_content_cell(metadata_uri.begin_parse()), ;; jetton_content
+        metadata_uri,                                   ;; jetton_content
         jetton_wallet_code                              ;; jetton_wallet_code
     );
 }
