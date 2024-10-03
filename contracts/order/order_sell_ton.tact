@@ -1,6 +1,6 @@
 import "./order_base";
 
-message Request {
+message(3907800561) Request {
     order_jetton_buy_wallet: Address;
     jetton_buy_master: Address;
     amount_sell: Int as coins;

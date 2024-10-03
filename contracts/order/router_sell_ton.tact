@@ -1,7 +1,7 @@
 import "./order_sell_ton";
 import "./router_base";
 
-message TonTransferNotification {
+message(3810013679) TonTransferNotification {
     request: Request;
     seller: Address;
     nonce: Int
