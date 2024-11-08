@@ -344,8 +344,13 @@ describe('First stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: seller.address,
             to: orderSellNft.address,
-            success: false,
-            exitCode: 40
+            success: true,
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellNft.address,
+            to: seller.address,
+            success: true,
         });
 
         await checkStage(orderSellNft, seller, request, false);
@@ -442,8 +447,19 @@ describe('First stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: errJettonWalletOrder.address,
             to: orderSellNft.address,
-            success: false,
-            exitCode: 40
+            success: true,
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellNft.address,
+            to: errJettonWalletOrder.address,
+            success: true,
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: errJettonWalletOrder.address,
+            to: errJettonWalletSeller.address,
+            success: true,
         });
 
         await checkStage(orderSellNft, seller, request, false);
@@ -466,8 +482,13 @@ describe('First stage', () => {
         expect(nftTransferResult.transactions).toHaveTransaction({
             from: deployer.address,
             to: orderSellNft.address,
-            success: false,
-            exitCode: 136
+            success: true,
+        });
+
+        expect(nftTransferResult.transactions).toHaveTransaction({
+            from: orderSellNft.address,
+            to: deployer.address,
+            success: true,
         });
 
         await checkStage(orderSellNft, seller, request, false);
@@ -522,23 +543,28 @@ describe('First stage', () => {
         expect(sellJettonTransferResult.transactions).toHaveTransaction({
             from: nftItemAddress,
             to: orderSellNft.address,
-            success: false,
-            exitCode: 136
+            success: true,
+        });
+
+        expect(sellJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellNft.address,
+            to: nftItemAddress,
+            success: true,
         });
 
         await checkStage(orderSellNft, seller, request, false);
     }, 100000000);
 
     it('main flow', async () => {
-        const sellTransferBody = beginCell()
-            .storeUint(0x5fcc3d14, 32)
-            .storeUint(0, 64)
-            .storeAddress(orderSellNft.address)
-            .storeAddress(orderSellNft.address)
-            .storeBit(0)
-            .storeCoins(toNano(0.1))
-            .storeBit(0)
-            .endCell();
+            const sellTransferBody = beginCell()
+                .storeUint(0x5fcc3d14, 32)
+                .storeUint(0, 64)
+                .storeAddress(orderSellNft.address)
+                .storeAddress(orderSellNft.address)
+                .storeBit(0)
+                .storeCoins(toNano(0.1))
+                .storeBit(0)
+                .endCell();
 
         const sellJettonTransferResult = await seller.send({
             value: toNano(0.2),
@@ -769,7 +795,7 @@ describe('Second stage', () => {
 
         const deployResult = await seller.send(
             {
-                value: toNano(0.1),
+                value: toNano(0.05),
                 to: orderSellNft.address,
                 sendMode: 2,
                 init: orderSellNft.init,
@@ -785,16 +811,27 @@ describe('Second stage', () => {
             .storeAddress(orderSellNft.address)
             .storeAddress(null)
             .storeBit(0)
-            .storeCoins(toNano(0.0042))
+            .storeCoins(toNano(0.0049))
             .storeBit(0)
             .endCell();
 
-        await seller.send({
-            value: toNano(0.005),
+        const res = await seller.send({
+            value: toNano(0.006),
             to: nftItem.address,
             sendMode: 2,
             body: sellTransferBody
         });
+
+        expect(res.transactions).toHaveTransaction({
+            from: seller.address,
+            to: nftItem.address,
+            success: true
+        })
+        expect(res.transactions).toHaveTransaction({
+            from: nftItem.address,
+            to: orderSellNft.address,
+            success: true
+        })
     }, 100000000);
 
     it('should deploy & mint & transfer jettons', async () => {
@@ -892,8 +929,13 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: seller.address,
             to: orderSellNft.address,
-            success: false,
-            exitCode: 136
+            success: true,
+        });
+
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellNft.address,
+            to: seller.address,
+            success: true,
         });
 
         await checkStage(orderSellNft, seller, request, true);
@@ -990,46 +1032,14 @@ describe('Second stage', () => {
         expect(errJettonTransferResult.transactions).toHaveTransaction({
             from: errJettonWalletOrder.address,
             to: orderSellNft.address,
-            success: false,
-            exitCode: 136
+            success: true,
         });
 
-        await checkStage(orderSellNft, seller, request, true);
-    }, 100000000);
-
-    it('notify from sellJettonWalletOrder', async () => {
-        const sellTransferBody = beginCell()
-            .store(storeJettonTransfer({
-                $$type: 'JettonTransfer',
-                query_id: 0n,
-                amount: 5n,
-                destination: orderSellNft.address,
-                response_destination: orderSellNft.address,
-                custom_payload: beginCell().endCell(),
-                forward_ton_amount: toNano(0.1),
-                forward_payload: beginCell().endCell().asSlice()
-            }))
-            .endCell();
-
-        // const sellJettonTransferResult = await deployer.send({
-        //     value: toNano(1),
-        //     to: sellJettonWalletDeployer.address,
-        //     sendMode: 2,
-        //     body: sellTransferBody
-        // });
-        //
-        // expect(sellJettonTransferResult.transactions).toHaveTransaction({
-        //     from: sellJettonWalletDeployer.address,
-        //     to: sellJettonWalletOrder.address,
-        //     success: true
-        // });
-        //
-        // expect(sellJettonTransferResult.transactions).toHaveTransaction({
-        //     from: sellJettonWalletOrder.address,
-        //     to: orderSellNft.address,
-        //     success: false,
-        //     exitCode: 41
-        // });
+        expect(errJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellNft.address,
+            to: errJettonWalletOrder.address,
+            success: true,
+        });
 
         await checkStage(orderSellNft, seller, request, true);
     }, 100000000);
@@ -1066,8 +1076,19 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: orderSellNft.address,
-            success: false,
-            exitCode: 42
+            success: true,
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellNft.address,
+            to: buyJettonWalletOrder.address,
+            success: true,
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletOrder.address,
+            to: buyJettonWalletBuyer.address,
+            success: true,
         });
 
         await checkStage(orderSellNft, seller, request, true);
@@ -1104,8 +1125,19 @@ describe('Second stage', () => {
         expect(buyJettonTransferResult.transactions).toHaveTransaction({
             from: buyJettonWalletOrder.address,
             to: orderSellNft.address,
-            success: false,
-            exitCode: 39
+            success: true,
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: orderSellNft.address,
+            to: buyJettonWalletOrder.address,
+            success: true,
+        });
+
+        expect(buyJettonTransferResult.transactions).toHaveTransaction({
+            from: buyJettonWalletOrder.address,
+            to: buyJettonWalletBuyer.address,
+            success: true,
         });
 
         await checkStage(orderSellNft, seller, request, true);
@@ -1416,7 +1448,7 @@ describe('Router', () => {
             .storeAddress(routerSellNft.address)
             .storeAddress(null)
             .storeBit(0)
-            .storeCoins(toNano(0.01 + 0.01 + 0.01 + 0.01)) // fee + deploy + send_nft + gas
+            .storeCoins(toNano(0.01 + 0.01 + 0.01 + 0.01 + 0.01)) // fee + deploy + send_nft + gas
             .storeBit(1)
             .storeSlice(createOrderBody)
             .endCell();

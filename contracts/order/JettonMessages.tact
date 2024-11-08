@@ -40,3 +40,21 @@ inline fun basicJettonTransfer(jetton_wallet: Address, destination: Address, amo
         }.toCell()
     });
 }
+
+// @notice Check that condition is true, else if incoming value is enought - withdraw jettons
+// @param code - code of the error being checking
+// @param condition - result of checking condition
+// @param to - withdraw destination of jettons
+// @param amount - withdraw amount of jettons
+inline fun SmartThrow(code: Int, condition: Bool, to: Address, amount: Int): Bool {
+    if (!condition) {
+        if (context().value - context().readForwardFee() >= jetton_transfer_fee) {
+            basicJettonTransfer(context().sender, to, amount, 0);
+        } else {
+            nativeThrow(not_enough_ton);
+        }
+        emit(beginCell().storeUint(code, 32).endCell());
+    }
+
+    return condition;
+}

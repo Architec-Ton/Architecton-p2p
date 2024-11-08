@@ -1,7 +1,6 @@
 import "./order_base";
 import "./NftMessages";
 
-// TODO: add withdrawal when failure
 contract OrderSellNft with OrderBase {
     seller: Address;
     router: Address;
@@ -23,6 +22,9 @@ contract OrderSellNft with OrderBase {
         self.router = context().sender;
         self.seller = seller;
     }
+
+    // @notice Receive request message, validate and set request data
+    // @param request - request message with necessary params
     receive(request: Request) {
         nativeThrowUnless(access_denided, context().sender == self.router);
         nativeThrowUnless(order_already_filled, !self.filled);
@@ -33,21 +35,21 @@ contract OrderSellNft with OrderBase {
     }
 
     receive(notify: NftTransferNotification) {
-        nativeThrowUnless(order_not_filled, self.filled);
-        nativeThrowUnless(order_already_opened, !self.open);
-        nativeThrowUnless(invalid_address, context().sender == self.request.nft_address);
-        nativeThrowUnless(access_denided, notify.forward_payload.loadAddress() == self.router);
+        if(!SmartThrowNft(invalid_address, context().sender == self.request.nft_address, self.seller)){ return;}
+        if(!SmartThrowNft(order_not_filled, self.filled, self.seller)){return;}
+        if(!SmartThrowNft(order_already_opened, !self.open, self.seller)){return;}
+        if(!SmartThrowNft(access_denided, notify.forward_payload.loadAddress() == self.router, self.seller)){return;}
 
         self.open = true;
     }
 
     receive(notify: JettonTransferNotification) {
-        nativeThrowUnless(order_not_opened, self.open);
-        nativeThrowUnless(invalid_address, context().sender == self.request.order_jetton_buy_wallet);
-        nativeThrowUnless(invalid_expiration_time, self.request.expiration_time > now());
-        nativeThrowUnless(invalid_jetton_amount, notify.amount == self.request.amount_buy);
+        if (!SmartThrow(order_not_opened, self.open, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_address, context().sender == self.request.order_jetton_buy_wallet, notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_expiration_time, self.request.expiration_time > now(), notify.sender, notify.amount)) {return;}
+        if (!SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_buy, notify.sender, notify.amount)) {return;}
 
-        send_nft(nft_transfer_fee, self.request.nft_address, notify.sender, self.seller, 0, SendIgnoreErrors);
+        send_nft(nft_transfer_fee, self.request.nft_address, notify.sender, self.seller, 0);
         basicJettonTransfer(self.request.order_jetton_buy_wallet, self.seller, self.request.amount_buy, 0);
 
         self.withdraw()
@@ -56,7 +58,7 @@ contract OrderSellNft with OrderBase {
     receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
-        send_nft(nft_transfer_fee, self.request.nft_address, self.seller, self.seller, 0, SendIgnoreErrors);
+        send_nft(nft_transfer_fee, self.request.nft_address, self.seller, self.seller, 0);
 
         self.withdraw()
     }
