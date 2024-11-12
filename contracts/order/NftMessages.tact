@@ -1,13 +1,4 @@
-const nft_transfer_fee: Int = ton("0.005");
-
-message Request {
-    nft_address: Address;
-    order_jetton_buy_wallet: Address;
-    jetton_buy_master: Address;
-    amount_buy: Int as coins;
-
-    expiration_time: Int as uint64 = 0;
-}
+const nft_transfer_fee: Int = ton("0.01");
 
 message(0x05138d91) NftTransferNotification {
     query_id: Int as uint64;                // arbitrary request number

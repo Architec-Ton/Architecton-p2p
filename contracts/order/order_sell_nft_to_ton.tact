@@ -1,23 +1,20 @@
 import "./order_base";
+import "./NftMessages";
 
 message Request {
-    order_jetton_sell_wallet: Address;
-    jetton_sell_master: Address;
-    amount_sell: Int as coins;
+    nft_address: Address;
     amount_buy: Int as coins;
 
     expiration_time: Int as uint64 = 0;
 }
 
-contract OrderBuyTon with OrderBase {
+contract OrderSellNftToTon with OrderBase {
     seller: Address;
     router: Address;
-    type: Int as uint8 = 1;
+    type: Int as uint8 = 3;
 
     request: Request = Request {
-        order_jetton_sell_wallet: newAddress(0,0),
-        jetton_sell_master: newAddress(0,0),
-        amount_sell: 0,
+        nft_address: newAddress(0,0),
         amount_buy: 0,
 
         expiration_time: 0,
@@ -42,19 +39,15 @@ contract OrderBuyTon with OrderBase {
         self.filled = true;
     }
 
-    // @notice Receive Jetton Transfer Notification from seller, validate and set order open
-    receive(notify: JettonTransferNotification) {
-        if (!SmartThrow(order_not_filled, self.filled, notify.sender, notify.amount)) {return;}
-        if (!SmartThrow(access_denided, notify.sender == self.router, notify.sender, notify.amount)) {return;}
-        if (!SmartThrow(order_already_opened, !self.open, self.seller, notify.amount)) {return;}
-        if (!SmartThrow(invalid_address, context().sender == self.request.order_jetton_sell_wallet, self.seller, notify.amount)) {return;}
-        if (!SmartThrow(invalid_expiration_time, self.request.expiration_time > now(), self.seller, notify.amount)) {return;}
-        if (!SmartThrow(invalid_jetton_amount, notify.amount == self.request.amount_sell, self.seller, notify.amount)) {return;}
+    receive(notify: NftTransferNotification) {
+        if(!SmartThrowNft(invalid_address, context().sender == self.request.nft_address, self.seller)){ return;}
+        if(!SmartThrowNft(order_not_filled, self.filled, self.seller)){return;}
+        if(!SmartThrowNft(order_already_opened, !self.open, self.seller)){return;}
+        if(!SmartThrowNft(access_denided, notify.forward_payload.loadAddress() == self.router, self.seller)){return;}
 
         self.open = true;
     }
 
-    // @notice Receive toncoin from anyone, validate and send ton and jetton to seller and buyer
     receive("transfer ton") {
         let ctx = context();
 
@@ -76,18 +69,15 @@ contract OrderBuyTon with OrderBase {
             mode: SendIgnoreErrors + SendPayGasSeparately,
         });
 
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, buyer, self.request.amount_sell, 0);
+        send_nft(nft_transfer_fee, self.request.nft_address, buyer, self.seller, 0);
 
         self.withdraw()
     }
 
-    // @notice Receive cancel message, validate and send jettons and withdraw to seller
     receive(cancel: Cancel) {
         nativeThrowUnless(order_closed, self.open);
         nativeThrowUnless(access_denided, context().sender == self.seller);
-        nativeThrowUnless(not_enough_ton, myBalance() >= jetton_transfer_fee);
-
-        basicJettonTransfer(self.request.order_jetton_sell_wallet, self.seller, self.request.amount_sell, 0);
+        send_nft(nft_transfer_fee, self.request.nft_address, self.seller, self.seller, 0);
 
         self.withdraw()
     }

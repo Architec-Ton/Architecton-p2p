@@ -1,7 +1,7 @@
-import "./order_sell_nft";
+import "./order_sell_nft_to_ton";
 import "./router_base";
 
-contract RouterSellNft with RouterBase {
+contract RouterSellNftToTon with RouterBase {
     owner: Address;
     fee: Int;
 
@@ -22,7 +22,7 @@ contract RouterSellNft with RouterBase {
         let expectedValue = deploy_fee + nft_transfer_fee + ton("0.005") + self.fee + ton("0.01");
         if(!SmartThrowNft(not_enough_ton, context().value > expectedValue, seller)){return;}
 
-        let orderInit = initOf OrderSellNft(init_seller, init_nonce);
+        let orderInit = initOf OrderSellNftToTon(init_seller, init_nonce);
         let orderAddress = contractAddressExt(0, orderInit.code, orderInit.data);
 
         send(SendParameters{
@@ -38,7 +38,7 @@ contract RouterSellNft with RouterBase {
     }
 
     override get fun calculate_order(seller: Address, nonce: Int): Address {
-        let orderInit = initOf OrderSellNft(seller, nonce);
+        let orderInit = initOf OrderSellNftToTon(seller, nonce);
         return contractAddressExt(0, orderInit.code, orderInit.data);
     }
 }

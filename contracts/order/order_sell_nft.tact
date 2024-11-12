@@ -1,6 +1,15 @@
 import "./order_base";
 import "./NftMessages";
 
+message Request {
+    nft_address: Address;
+    order_jetton_buy_wallet: Address;
+    jetton_buy_master: Address;
+    amount_buy: Int as coins;
+
+    expiration_time: Int as uint64 = 0;
+}
+
 contract OrderSellNft with OrderBase {
     seller: Address;
     router: Address;
