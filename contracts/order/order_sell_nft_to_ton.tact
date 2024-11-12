@@ -11,7 +11,7 @@ message Request {
 contract OrderSellNftToTon with OrderBase {
     seller: Address;
     router: Address;
-    type: Int as uint8 = 3;
+    type: Int as uint8 = 4;
 
     request: Request = Request {
         nft_address: newAddress(0,0),
