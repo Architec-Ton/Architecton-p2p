@@ -1,0 +1,40 @@
+import "./JettonMessages";
+import "./errcodes";
+
+message(0x71a9dc7a) Cancel {}
+
+struct State {
+    type: Int as uint8;
+    seller: Address;
+    request: Request;
+    open: Bool;
+}
+
+trait OrderBase {
+    seller: Address;
+    router: Address;
+    type: Int;
+
+    request: Request;
+
+    open: Bool;
+
+    // @notice Send all balance to owner and annihilate contract from blockchain
+    fun withdraw() {
+        send(SendParameters{
+            to: self.seller,
+            value: 0,
+            mode: SendRemainingBalance + SendDestroyIfZero,
+        });
+    }
+
+    // @notice return self params of Order contract
+    get fun state(): State {
+        return State {
+            type: self.type,
+            seller: self.seller,
+            request: self.request,
+            open: self.open,
+        };
+    }
+}
